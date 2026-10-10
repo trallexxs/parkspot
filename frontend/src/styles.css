@@ -161,3 +161,17 @@ input { font: inherit; padding: 11px 12px; border-radius: 12px; border: 1px soli
 .operator-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
 @media (min-width: 900px) { .operator-grid { grid-template-columns: 3fr 2fr; } }
 .event { display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid var(--line); padding-bottom: 8px; font-size: 14px; }
+
+/* ---- labelling ---- */
+.label-wrap { overflow: auto; border-radius: 12px; max-height: 70vh; }
+.label-svg { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+.lbl { stroke-width: 2; vector-effect: non-scaling-stroke; cursor: pointer; }
+.lbl.occ { fill: rgba(208, 48, 80, .28); stroke: #d03050; }
+.lbl.free { fill: rgba(24, 160, 88, .35); stroke: #18a058; }
+.lbl.human { stroke-dasharray: 6 3; }
+.lbl.drawing { fill: rgba(31, 95, 224, .25); stroke: #1f5fe0; }
+.cond-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+select { font: inherit; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--text); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tbl th, .tbl td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.tbl th:first-child, .tbl td:first-child { text-align: left; }

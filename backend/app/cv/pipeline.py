@@ -6,7 +6,8 @@ import cv2
 import numpy as np
 
 from . import quality as q
-from .detector import get_detector
+from .. import config
+from .detector import get_detector, nms
 from .layout import auto_layout
 from .occupancy import spot_scores
 
@@ -39,7 +40,11 @@ def analyze(img, spots=None):
     work, enhanced = q.enhance(img, qual)
     t["quality_ms"] = round((time.perf_counter() - t0) * 1000, 1)
 
-    dets, dinfo = get_detector().detect(work)
+    dets, dinfo = get_detector().detect(img)
+    if enhanced:  # dark frame: also detect on the stretched copy and merge (night recall)
+        more, info2 = get_detector().detect(work)
+        dets = nms(dets + more, config.NMS_IOU)
+        dinfo = {**dinfo, "ms": round(dinfo["ms"] + info2["ms"], 1), "views": 2}
     t["detect_ms"] = dinfo["ms"]
 
     t1 = time.perf_counter()

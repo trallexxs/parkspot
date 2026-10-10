@@ -9,6 +9,8 @@ import Display from "./pages/Display.jsx";
 import Vision from "./pages/Vision.jsx";
 import Camera from "./pages/Camera.jsx";
 import Operator from "./pages/Operator.jsx";
+import Label from "./pages/Label.jsx";
+import Quality from "./pages/Quality.jsx";
 
 export default function App() {
   const { pathname } = useLocation();
@@ -28,6 +30,8 @@ export default function App() {
           <Route path="/camera" element={<Camera />} />
           <Route path="/camera/:id" element={<Camera />} />
           <Route path="/operator/:id" element={<Operator />} />
+          <Route path="/label" element={<Label />} />
+          <Route path="/quality" element={<Quality />} />
         </Routes>
       </main>
       {!fullscreen && <BottomNav />}

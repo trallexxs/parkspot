@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 
 /** CV console: any photo of a parking lot -> vehicles, discovered spots, occupancy, timing.
@@ -73,12 +73,13 @@ export default function Vision() {
         </>
       )}
 
-      {metrics?.available && (
-        <div className="card">
-          <h3>Measured quality (our test set)</h3>
-          <pre className="mono small">{JSON.stringify(metrics.summary, null, 2)}</pre>
+      <div className="card">
+        <div className="row-btns">
+          <Link className="btn ghost" to="/quality">Measured quality{metrics?.available ? ` (${metrics.summary.images} photos)` : ""}</Link>
+          <Link className="btn ghost" to="/label">Build the test set</Link>
+          <Link className="btn ghost" to="/camera">Phone as lot camera</Link>
         </div>
-      )}
+      </div>
     </div>
   );
 }

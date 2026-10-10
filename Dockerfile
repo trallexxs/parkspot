@@ -12,6 +12,7 @@ COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend backend
 COPY data/demo data/demo
+COPY eval/results eval/results
 COPY --from=web /web/dist frontend/dist
 RUN chmod -R a+rwX /app
 ENV PARK_DB=/tmp/parking.sqlite3 ORT_THREADS=2

@@ -1,0 +1,333 @@
+{
+ "test_set": {
+  "images": 4,
+  "spots": 52,
+  "bundles": [
+   "dev_ultralytics_sample.json"
+  ],
+  "conditions": {
+   "lighting=day": 4,
+   "view=top-down": 4,
+   "weather=clear": 4
+  }
+ },
+ "clean": {
+  "occupancy_known_spots": {
+   "spots": 52,
+   "accuracy": 1.0,
+   "free_precision": 1.0,
+   "free_recall": 1.0,
+   "free_f1": 1.0,
+   "free_spots_gt": 2
+  },
+  "occupancy_by_condition": {
+   "lighting=day": {
+    "spots": 52,
+    "accuracy": 1.0,
+    "free_precision": 1.0,
+    "free_recall": 1.0,
+    "free_f1": 1.0,
+    "free_spots_gt": 2
+   },
+   "view=top-down": {
+    "spots": 52,
+    "accuracy": 1.0,
+    "free_precision": 1.0,
+    "free_recall": 1.0,
+    "free_f1": 1.0,
+    "free_spots_gt": 2
+   },
+   "weather=clear": {
+    "spots": 52,
+    "accuracy": 1.0,
+    "free_precision": 1.0,
+    "free_recall": 1.0,
+    "free_f1": 1.0,
+    "free_spots_gt": 2
+   }
+  },
+  "layout_discovery": {
+   "gt_spots": 52,
+   "predicted_spots": 52,
+   "matched": 52,
+   "recall": 1.0,
+   "precision": 1.0
+  },
+  "end_to_end_zero_config": {
+   "spots": 52,
+   "accuracy": 1.0,
+   "free_precision": 1.0,
+   "free_recall": 1.0,
+   "free_f1": 1.0,
+   "free_spots_gt": 2
+  },
+  "latency_ms": {
+   "mean": 193.6,
+   "p95": 244.7
+  },
+  "per_image": [
+   {
+    "key": "dev_ultralytics_sample#0",
+    "spots": 13,
+    "occupancy_errors": 0,
+    "auto_spots": 13,
+    "auto_matched": 13
+   },
+   {
+    "key": "dev_ultralytics_sample#1",
+    "spots": 13,
+    "occupancy_errors": 0,
+    "auto_spots": 13,
+    "auto_matched": 13
+   },
+   {
+    "key": "dev_ultralytics_sample#2",
+    "spots": 13,
+    "occupancy_errors": 0,
+    "auto_spots": 13,
+    "auto_matched": 13
+   },
+   {
+    "key": "dev_ultralytics_sample#3",
+    "spots": 13,
+    "occupancy_errors": 0,
+    "auto_spots": 13,
+    "auto_matched": 13
+   }
+  ]
+ },
+ "synthetic_degradation": {
+  "night": {
+   "occupancy_known_spots": {
+    "spots": 52,
+    "accuracy": 0.9231,
+    "free_precision": 0.3333,
+    "free_recall": 1.0,
+    "free_f1": 0.5,
+    "free_spots_gt": 2
+   },
+   "occupancy_by_condition": {
+    "lighting=day": {
+     "spots": 52,
+     "accuracy": 0.9231,
+     "free_precision": 0.3333,
+     "free_recall": 1.0,
+     "free_f1": 0.5,
+     "free_spots_gt": 2
+    },
+    "view=top-down": {
+     "spots": 52,
+     "accuracy": 0.9231,
+     "free_precision": 0.3333,
+     "free_recall": 1.0,
+     "free_f1": 0.5,
+     "free_spots_gt": 2
+    },
+    "weather=clear": {
+     "spots": 52,
+     "accuracy": 0.9231,
+     "free_precision": 0.3333,
+     "free_recall": 1.0,
+     "free_f1": 0.5,
+     "free_spots_gt": 2
+    }
+   },
+   "layout_discovery": {
+    "gt_spots": 52,
+    "predicted_spots": 53,
+    "matched": 48,
+    "recall": 0.9231,
+    "precision": 0.9057
+   },
+   "end_to_end_zero_config": {
+    "spots": 52,
+    "accuracy": 0.9808,
+    "free_precision": 0.6667,
+    "free_recall": 1.0,
+    "free_f1": 0.8,
+    "free_spots_gt": 2
+   },
+   "latency_ms": {
+    "mean": 304.8,
+    "p95": 325.4
+   }
+  },
+  "rain": {
+   "occupancy_known_spots": {
+    "spots": 52,
+    "accuracy": 1.0,
+    "free_precision": 1.0,
+    "free_recall": 1.0,
+    "free_f1": 1.0,
+    "free_spots_gt": 2
+   },
+   "occupancy_by_condition": {
+    "lighting=day": {
+     "spots": 52,
+     "accuracy": 1.0,
+     "free_precision": 1.0,
+     "free_recall": 1.0,
+     "free_f1": 1.0,
+     "free_spots_gt": 2
+    },
+    "view=top-down": {
+     "spots": 52,
+     "accuracy": 1.0,
+     "free_precision": 1.0,
+     "free_recall": 1.0,
+     "free_f1": 1.0,
+     "free_spots_gt": 2
+    },
+    "weather=clear": {
+     "spots": 52,
+     "accuracy": 1.0,
+     "free_precision": 1.0,
+     "free_recall": 1.0,
+     "free_f1": 1.0,
+     "free_spots_gt": 2
+    }
+   },
+   "layout_discovery": {
+    "gt_spots": 52,
+    "predicted_spots": 52,
+    "matched": 52,
+    "recall": 1.0,
+    "precision": 1.0
+   },
+   "end_to_end_zero_config": {
+    "spots": 52,
+    "accuracy": 1.0,
+    "free_precision": 1.0,
+    "free_recall": 1.0,
+    "free_f1": 1.0,
+    "free_spots_gt": 2
+   },
+   "latency_ms": {
+    "mean": 293.6,
+    "p95": 323.9
+   }
+  },
+  "fog": {
+   "occupancy_known_spots": {
+    "spots": 52,
+    "accuracy": 1.0,
+    "free_precision": 1.0,
+    "free_recall": 1.0,
+    "free_f1": 1.0,
+    "free_spots_gt": 2
+   },
+   "occupancy_by_condition": {
+    "lighting=day": {
+     "spots": 52,
+     "accuracy": 1.0,
+     "free_precision": 1.0,
+     "free_recall": 1.0,
+     "free_f1": 1.0,
+     "free_spots_gt": 2
+    },
+    "view=top-down": {
+     "spots": 52,
+     "accuracy": 1.0,
+     "free_precision": 1.0,
+     "free_recall": 1.0,
+     "free_f1": 1.0,
+     "free_spots_gt": 2
+    },
+    "weather=clear": {
+     "spots": 52,
+     "accuracy": 1.0,
+     "free_precision": 1.0,
+     "free_recall": 1.0,
+     "free_f1": 1.0,
+     "free_spots_gt": 2
+    }
+   },
+   "layout_discovery": {
+    "gt_spots": 52,
+    "predicted_spots": 51,
+    "matched": 51,
+    "recall": 0.9808,
+    "precision": 1.0
+   },
+   "end_to_end_zero_config": {
+    "spots": 52,
+    "accuracy": 1.0,
+    "free_precision": 1.0,
+    "free_recall": 1.0,
+    "free_f1": 1.0,
+    "free_spots_gt": 2
+   },
+   "latency_ms": {
+    "mean": 146.5,
+    "p95": 153.9
+   }
+  },
+  "blur": {
+   "occupancy_known_spots": {
+    "spots": 52,
+    "accuracy": 1.0,
+    "free_precision": 1.0,
+    "free_recall": 1.0,
+    "free_f1": 1.0,
+    "free_spots_gt": 2
+   },
+   "occupancy_by_condition": {
+    "lighting=day": {
+     "spots": 52,
+     "accuracy": 1.0,
+     "free_precision": 1.0,
+     "free_recall": 1.0,
+     "free_f1": 1.0,
+     "free_spots_gt": 2
+    },
+    "view=top-down": {
+     "spots": 52,
+     "accuracy": 1.0,
+     "free_precision": 1.0,
+     "free_recall": 1.0,
+     "free_f1": 1.0,
+     "free_spots_gt": 2
+    },
+    "weather=clear": {
+     "spots": 52,
+     "accuracy": 1.0,
+     "free_precision": 1.0,
+     "free_recall": 1.0,
+     "free_f1": 1.0,
+     "free_spots_gt": 2
+    }
+   },
+   "layout_discovery": {
+    "gt_spots": 52,
+    "predicted_spots": 52,
+    "matched": 52,
+    "recall": 1.0,
+    "precision": 1.0
+   },
+   "end_to_end_zero_config": {
+    "spots": 52,
+    "accuracy": 1.0,
+    "free_precision": 1.0,
+    "free_recall": 1.0,
+    "free_f1": 1.0,
+    "free_spots_gt": 2
+   },
+   "latency_ms": {
+    "mean": 157.4,
+    "p95": 176.8
+   }
+  }
+ },
+ "synthetic_method": "night: pixel=(0.22*x)^1.15 for x in 0..255 (mean V ~44), + gaussian noise sigma 6; rain: random 8-22 px streaks (1 per 600 px^2) + 3x3 blur, 80% contrast; fog: 45% blend with grey 200; blur: gaussian sigma 2.5",
+ "summary": {
+  "images": 4,
+  "spots": 52,
+  "occupancy_accuracy": 1.0,
+  "free_precision": 1.0,
+  "free_recall": 1.0,
+  "layout_recall": 1.0,
+  "layout_precision": 1.0,
+  "latency_ms_mean": 193.6
+ },
+ "evaluated_at": "2026-10-10 12:40:33"
+}

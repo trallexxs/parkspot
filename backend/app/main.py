@@ -134,7 +134,7 @@ async def analyze(image: UploadFile = File(...), lot_id: str = Form("")):
         with lots.interactive():
             res = pipeline.analyze(_read_image(data), spots=spots)
             annotated = pipeline.draw(res.pop("_img"), res["spots"], res["detections"])
-            res["annotated"] = pipeline.to_b64(annotated)
+            res["annotated"] = pipeline.to_b64(pipeline.limit_size(annotated, 1280))  # light for phones
             return res
     return await run_in_threadpool(work)
 

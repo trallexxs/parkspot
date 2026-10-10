@@ -8,6 +8,7 @@ so the same code works whatever the camera angle is.
 """
 import threading
 import time
+from contextlib import contextmanager
 
 import cv2
 import numpy as np
@@ -74,7 +75,11 @@ class Detector:
     def _run(self, img, offset=(0, 0)):
         out = []
         for name, model, cmap in self.models:
-            xyxy, conf, cls = model.predict(img, config.DET_CONF, cmap)
+            if out and name == "ground" and _decisive(out):
+                break  # the aerial model already explains a top-down view: skip the ground model
+            _wait_if_background()
+            with self.lock:
+                xyxy, conf, cls = model.predict(img, config.DET_CONF, cmap)
             for b, c, k in zip(xyxy, conf, cls):
                 out.append({
                     "box": [float(b[0] + offset[0]), float(b[1] + offset[1]),
@@ -111,16 +116,57 @@ class Detector:
         """Returns (detections, info). Each detection: box [x1,y1,x2,y2], conf, cls, model."""
         t0 = time.perf_counter()
         h, w = img.shape[:2]
-        with self.lock:
-            dets = self._run(img)
-            tiled = self._needs_tiles(dets, h, w)
-            if tiled:
-                size = int(min(h, w, max(h, w) / 2))
-                for x, y in self._tiles(h, w, size):
-                    dets += self._run(img[y:y + size, x:x + size], (x, y))
+        dets = self._run(img)
+        tiled = self._needs_tiles(dets, h, w)
+        if tiled:
+            size = int(min(h, w, max(h, w) / 2))
+            for x, y in self._tiles(h, w, size):
+                dets += self._run(img[y:y + size, x:x + size], (x, y))
         merged = nms(dets, config.NMS_IOU)
         return merged, {"tiled": tiled, "raw": len(dets),
                         "ms": round((time.perf_counter() - t0) * 1000, 1)}
+
+
+def _decisive(dets):
+    """Enough confident aerial-model vehicles that the ground model would add nothing."""
+    if not config.CASCADE:
+        return False
+    conf = sorted(d["conf"] for d in dets)
+    return len(conf) >= config.CASCADE_MIN_CARS and conf[len(conf) // 2] >= config.CASCADE_MIN_CONF
+
+
+# Priority: a person waiting (photo analysis, phone camera, new lot) goes before background work
+# (the replay camera). The model lock is taken per model run, and background threads wait before
+# each run while anyone is waiting, so a person waits for at most one in-flight model run.
+_waiting = 0
+_waiting_lock = threading.Lock()
+_tls = threading.local()
+
+
+@contextmanager
+def interactive():
+    global _waiting
+    with _waiting_lock:
+        _waiting += 1
+    try:
+        yield
+    finally:
+        with _waiting_lock:
+            _waiting -= 1
+
+
+@contextmanager
+def background():
+    _tls.background = True
+    try:
+        yield
+    finally:
+        _tls.background = False
+
+
+def _wait_if_background():
+    while getattr(_tls, "background", False) and _waiting > 0:
+        time.sleep(0.05)
 
 
 def nms(dets, iou_thr):

@@ -18,6 +18,9 @@ ORT_THREADS = int(os.environ.get("ORT_THREADS", "2"))
 DET_IMGSZ = 640
 DET_CONF = 0.25
 NMS_IOU = 0.5
+CASCADE = os.environ.get("CASCADE", "1") == "1"  # skip the ground model when the aerial one is decisive
+CASCADE_MIN_CARS = 8        # ...it found at least this many vehicles
+CASCADE_MIN_CONF = 0.6      # ...with at least this median confidence
 TILE_ABOVE_PX = 1400        # images larger than this MAY also be processed in overlapping tiles...
 TILE_SMALL_PX = 18          # ...when boxes are this small at network scale (short side, px)
 TILE_SMALL_FRAC = 0.3       # ...for at least this share of the boxes (or nothing was found)

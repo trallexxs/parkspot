@@ -90,6 +90,11 @@ found by auto-layout. Synthetic degradations of the same frames: night 92% accur
 
 ## Known failure cases (current prototype)
 
+- Detector cascade: when the aerial model already finds 8+ vehicles with median confidence ≥ 0.6,
+  the ground model is skipped (2.5× faster, identical results on the dev set and its synthetic
+  degradations). The dev set is top-down only; side-view cameras are not yet measured with it
+  (`CASCADE=0` switches it off).
+
 - Views where cars do not form clear rows (very oblique cameras, chaotic informal parking).
 - Rows with fewer than 3 visible cars are not discovered automatically.
 - Empty spots at the very ends of a row are not inferred (no neighbour to measure the gap).

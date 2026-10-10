@@ -3,13 +3,13 @@ import json
 import math
 import threading
 import time
-from contextlib import contextmanager
 from datetime import timedelta
 
 import cv2
 
 from . import config, store
 from .cv import pipeline
+from .cv import detector as detector_priority
 from .cv.detector import get_detector
 from .cv.occupancy import SpotSmoother, spot_scores
 from .guidance import directions
@@ -77,11 +77,10 @@ class CameraWorker(threading.Thread):
                     while (self.lot.frame is not None
                            and time.time() - self.lot.last_viewed > config.CAMERA_IDLE_AFTER_S):
                         time.sleep(1.0)  # nobody is watching: save CPU on small servers
-                    while _interactive > 0:
-                        time.sleep(0.2)  # someone is waiting for an answer: let them go first
                     t0 = time.time()
                     try:
-                        self.lot.process(f)
+                        with detector_priority.background():  # yields to people between model runs
+                            self.lot.process(f)
                     except Exception as e:  # keep the camera alive
                         print("camera error", self.lot.id, e)
                     took = time.time() - t0
@@ -92,22 +91,7 @@ class CameraWorker(threading.Thread):
 
 LOTS: dict[str, Lot] = {}
 
-# A person waiting for an answer (photo analysis, a phone camera frame, a new lot) goes first:
-# the replay camera pauses while any such request is running. Matters on small servers.
-_interactive = 0
-_interactive_lock = threading.Lock()
-
-
-@contextmanager
-def interactive():
-    global _interactive
-    with _interactive_lock:
-        _interactive += 1
-    try:
-        yield
-    finally:
-        with _interactive_lock:
-            _interactive -= 1
+interactive = detector_priority.interactive  # kept as lots.interactive for main.py
 
 
 def load_all():

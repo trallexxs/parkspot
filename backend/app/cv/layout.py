@@ -47,7 +47,7 @@ def _find_rows(b, idx_pool):
             if abs(slope) > 0.35:
                 continue
             res = np.abs(cv[pool] - (cv[i] + slope * (cu[pool] - cu[i])))
-            inl = [p for p, r in zip(pool, res) if r < 0.3 * sv[p]]
+            inl = [p for p, r in zip(pool, res) if r < config.ROW_ALIGN_TOL * sv[p]]
             if len(inl) > len(best):
                 best = inl
         if len(best) < config.ROW_MIN_CARS:
@@ -129,25 +129,29 @@ def auto_layout(detections, min_conf=None, image_size=None):
         return {"spots": [], "rows": 0, "unassigned": len(dets)}
     boxes = np.array([d["box"] for d in dets], float)
 
+    # Two readings of the same boxes: horizontal rows first, or vertical rows first (leftovers go
+    # to the other orientation). A reading is scored by the cars it explains minus a penalty per
+    # spot it has to invent: "rows" that jump across the driving aisle need invented spots there.
     best = None
     for order in ((False, True), (True, False)):
         pool = set(range(len(dets)))
-        found = []
-        for vertical in order:
+        rows_built = []
+        for k, vertical in enumerate(order):
             rb = _to_row_frame(boxes, vertical)
-            rows = _find_rows(rb, sorted(pool))
-            for r in rows:
-                found.append((vertical, r))
-                pool -= set(r)
-        score = sum(len(r) for _, r in found)
+            for members in _find_rows(rb, sorted(pool)):
+                spots, v_mean, pitch = _row_spots(rb, members)
+                inferred = sum(1 for sp in spots if not sp["observed"])
+                if k > 0 and inferred >= len(members):
+                    continue  # a leftover "row" that is mostly invented: not a row
+                rows_built.append((vertical, v_mean, spots, pitch, members))
+                pool -= set(members)
+        assigned = sum(len(r[4]) for r in rows_built)
+        inferred = sum(1 for r in rows_built for sp in r[2] if not sp["observed"])
+        score = assigned - config.LAYOUT_INFERRED_PENALTY * inferred
         if best is None or score > best[0]:
-            best = (score, found)
+            best = (score, rows_built, assigned)
 
-    rows_out = []
-    for vertical, members in best[1]:
-        rb = _to_row_frame(boxes, vertical)
-        spots, v_mean, pitch = _row_spots(rb, members)
-        rows_out.append((vertical, v_mean, spots, pitch))
+    rows_out = [r[:4] for r in best[1]]
 
     # name rows top-to-bottom (horizontal rows) then left-to-right (vertical rows)
     rows_out.sort(key=lambda r: (r[0], r[1]))
@@ -162,8 +166,7 @@ def auto_layout(detections, min_conf=None, image_size=None):
             out.append({"id": f"{letter}{n}", "row": letter,
                         "polygon": [[round(x, 1), round(y, 1)] for x, y in poly],
                         "source": "observed" if s["observed"] else "inferred"})
-    assigned = sum(len(r) for _, r in best[1])
-    return {"spots": out, "rows": len(rows_out), "unassigned": len(dets) - assigned}
+    return {"spots": out, "rows": len(rows_out), "unassigned": len(dets) - best[2]}
 
 
 def stable_boxes(frames_dets, min_frac=0.5, iou_thr=0.6):

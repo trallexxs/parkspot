@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
+import { loadAndResize } from "../imageUtil.js";
 
 /** CV console: any photo of a parking lot -> vehicles, discovered spots, occupancy, timing.
  *  This is where the jury's own image goes. */
@@ -16,8 +17,12 @@ export default function Vision() {
   useEffect(() => { api.metrics().then(setMetrics).catch(() => {}); }, []);
 
   async function run(f) {
-    setFile(f); setRes(null); setErr(""); setBusy(true);
-    try { setRes(await api.analyze(f)); } catch (e) { setErr(e.message); }
+    setRes(null); setErr(""); setBusy(true);
+    try {
+      const small = (await loadAndResize(f)).file;
+      setFile(small);
+      setRes(await api.analyze(small));
+    } catch (e) { setErr(e.message); }
     setBusy(false);
   }
   async function makeLot() {

@@ -1,11 +1,13 @@
 """HTTP API + static frontend."""
 import json
+import os
 from datetime import timedelta
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from . import config, lots, store
@@ -31,7 +33,8 @@ def get_lot(lot_id):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "lots": len(lots.LOTS)}
+    # RENDER_GIT_COMMIT is set by Render: shows exactly which commit of the repo is running
+    return {"ok": True, "lots": len(lots.LOTS), "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7]}
 
 
 # ------------------------------------------------------------------ lots
@@ -93,8 +96,12 @@ async def push_frame(lot_id: str, image: UploadFile = File(...), live: bool = Fo
     lot = get_lot(lot_id)
     if lot.cfg.get("camera", {}).get("type") == "video":
         raise HTTPException(400, "this lot is fed by a recorded camera; create your own lot to stream frames")
-    img = _read_image(await image.read())
-    res = lot.process(img, smooth=live)
+    data = await image.read()
+
+    def work():  # CPU-bound: off the event loop, ahead of the replay camera
+        with lots.interactive():
+            return lot.process(_read_image(data), smooth=live)
+    res = await run_in_threadpool(work)
     if lot.cfg.get("camera", {}).get("type") == "push":
         lot.cfg["camera"]["label"] = "Live phone camera" if live else lot.cfg["camera"].get("label", "")
     return {"timing": res["timing"], "summary": res["summary"]}
@@ -103,8 +110,13 @@ async def push_frame(lot_id: str, image: UploadFile = File(...), live: bool = Fo
 @app.post("/api/lots")
 async def create_lot(image: UploadFile = File(...), name: str = Form("My lot")):
     """Zero-config onboarding: one photo of a lot -> discovered spots -> bookable lot."""
-    img = pipeline.limit_size(_read_image(await image.read()))
-    res = pipeline.analyze(img)
+    data = await image.read()
+
+    def work():
+        with lots.interactive():
+            img = pipeline.limit_size(_read_image(data))
+            return img, pipeline.analyze(img)
+    img, res = await run_in_threadpool(work)
     if len(res["spots"]) < 3:
         raise HTTPException(422, "Could not find parking rows in this photo (need 3+ parked cars in a row).")
     lot = lots.create_from_analysis(name, img, res)
@@ -115,12 +127,16 @@ async def create_lot(image: UploadFile = File(...), name: str = Form("My lot")):
 
 @app.post("/api/analyze")
 async def analyze(image: UploadFile = File(...), lot_id: str = Form("")):
-    img = _read_image(await image.read())
+    data = await image.read()
     spots = get_lot(lot_id).spots if lot_id else None
-    res = pipeline.analyze(img, spots=spots)
-    annotated = pipeline.draw(res.pop("_img"), res["spots"], res["detections"])
-    res["annotated"] = pipeline.to_b64(annotated)
-    return res
+
+    def work():
+        with lots.interactive():
+            res = pipeline.analyze(_read_image(data), spots=spots)
+            annotated = pipeline.draw(res.pop("_img"), res["spots"], res["detections"])
+            res["annotated"] = pipeline.to_b64(annotated)
+            return res
+    return await run_in_threadpool(work)
 
 
 def _read_image(data):

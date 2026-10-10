@@ -1,5 +1,7 @@
 # ParkSpot — camera-based smart parking (working name)
 
+**Live demo:** https://parkspot-5bo4.onrender.com (free tier: open it a minute before use, it sleeps when idle) · `GET /api/health` shows the running commit
+
 Track: Computer Vision · Mode: **Startup** *(to be confirmed by the team)*
 
 Parking lots already have CCTV. ParkSpot turns those camera frames into a live map of free spots,

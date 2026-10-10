@@ -3,6 +3,7 @@ import json
 import math
 import threading
 import time
+from contextlib import contextmanager
 from datetime import timedelta
 
 import cv2
@@ -35,7 +36,10 @@ class Lot:
         return self.cfg["spots"]
 
     def process(self, img, smooth=True):
-        res = pipeline.analyze(img, spots=self.spots)
+        return self.apply(pipeline.analyze(img, spots=self.spots), smooth)
+
+    def apply(self, res, smooth=True):
+        """Take an analysis of this lot's camera frame (same spot ids) as the current state."""
         scores = [{"id": s["id"], "occupied": s["occupied"]} for s in res["spots"]]
         with self.lock:
             if smooth:
@@ -73,6 +77,8 @@ class CameraWorker(threading.Thread):
                     while (self.lot.frame is not None
                            and time.time() - self.lot.last_viewed > config.CAMERA_IDLE_AFTER_S):
                         time.sleep(1.0)  # nobody is watching: save CPU on small servers
+                    while _interactive > 0:
+                        time.sleep(0.2)  # someone is waiting for an answer: let them go first
                     t0 = time.time()
                     try:
                         self.lot.process(f)
@@ -85,6 +91,23 @@ class CameraWorker(threading.Thread):
 
 
 LOTS: dict[str, Lot] = {}
+
+# A person waiting for an answer (photo analysis, a phone camera frame, a new lot) goes first:
+# the replay camera pauses while any such request is running. Matters on small servers.
+_interactive = 0
+_interactive_lock = threading.Lock()
+
+
+@contextmanager
+def interactive():
+    global _interactive
+    with _interactive_lock:
+        _interactive += 1
+    try:
+        yield
+    finally:
+        with _interactive_lock:
+            _interactive -= 1
 
 
 def load_all():
@@ -120,7 +143,7 @@ def create_from_analysis(name, img, res):
     path.write_text(json.dumps(cfg, indent=1))
     lot = Lot(cfg, path)
     LOTS[lot_id] = lot
-    lot.process(img, smooth=False)
+    lot.apply(res, smooth=False)  # the analysis that found the spots is also the first frame
     store.log(lot_id, "lot_created", spots=len(spots))
     return lot
 

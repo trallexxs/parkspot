@@ -2,25 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { labelStore } from "../labelStore.js";
-
-const MAX_SIDE = 1600;
-
-function loadAndResize(file) {
-  return new Promise((res, rej) => {
-    const img = new Image();
-    img.onload = () => {
-      const s = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
-      const c = document.createElement("canvas");
-      c.width = Math.round(img.width * s);
-      c.height = Math.round(img.height * s);
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      const dataUrl = c.toDataURL("image/jpeg", 0.9);
-      c.toBlob((b) => res({ dataUrl, blob: b, width: c.width, height: c.height }), "image/jpeg", 0.9);
-    };
-    img.onerror = rej;
-    img.src = URL.createObjectURL(file);
-  });
-}
+import { loadAndResize } from "../imageUtil.js";
 
 const rect = (x1, y1, x2, y2) => [[x1, y1], [x2, y1], [x2, y2], [x1, y2]];
 
@@ -48,7 +30,7 @@ export default function Label() {
     try {
       const p = await loadAndResize(file);
       setPhoto({ ...p, name: file.name });
-      const r = await api.analyze(new File([p.blob], file.name, { type: "image/jpeg" }));
+      const r = await api.analyze(p.file);
       const s = r.spots.map((x) => ({ polygon: x.polygon, occupied: x.occupied, origin: "model" }));
       setSpots(s); setProposed(s.length); setStats({ toggled: 0, deleted: 0, added: 0 });
     } catch (e) { setErr(e.message); }

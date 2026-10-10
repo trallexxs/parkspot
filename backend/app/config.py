@@ -18,7 +18,9 @@ ORT_THREADS = int(os.environ.get("ORT_THREADS", "2"))
 DET_IMGSZ = 640
 DET_CONF = 0.25
 NMS_IOU = 0.5
-TILE_ABOVE_PX = 1400        # images larger than this are also processed in overlapping tiles
+TILE_ABOVE_PX = 1400        # images larger than this MAY also be processed in overlapping tiles...
+TILE_SMALL_PX = 18          # ...when boxes are this small at network scale (short side, px)
+TILE_SMALL_FRAC = 0.3       # ...for at least this share of the boxes (or nothing was found)
 
 # Image quality
 NIGHT_BRIGHTNESS = 70       # mean V (0..255) below this => night
@@ -34,6 +36,8 @@ EMA_ON, EMA_OFF = 0.6, 0.4  # hysteresis thresholds
 # Auto-layout
 ROW_MIN_CARS = 3
 LAYOUT_MIN_CONF = 0.35
+ROW_ALIGN_TOL = 0.4           # a car is on a row line if its centre is within 0.4 x its depth
+LAYOUT_INFERRED_PENALTY = 0.5 # score of a reading = cars explained - 0.5 x spots invented
 
 # Live camera worker
 CAMERA_INTERVAL_S = float(os.environ.get("CAMERA_INTERVAL_S", "1.5"))

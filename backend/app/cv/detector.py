@@ -94,13 +94,26 @@ class Detector:
             xs.append(w - size)
         return [(x, y) for y in ys for x in xs]
 
+    @staticmethod
+    def _needs_tiles(dets, h, w):
+        """Tiles cost 6+ extra passes, so a large image is tiled only when the full-image pass
+        suggests distant cars: none found, or many boxes tiny at the network's input scale."""
+        if max(h, w) <= config.TILE_ABOVE_PX:
+            return False
+        if not dets:
+            return True
+        scale = config.DET_IMGSZ / max(h, w)
+        small = [min(d["box"][2] - d["box"][0], d["box"][3] - d["box"][1]) * scale < config.TILE_SMALL_PX
+                 for d in dets]
+        return sum(small) / len(small) >= config.TILE_SMALL_FRAC
+
     def detect(self, img):
         """Returns (detections, info). Each detection: box [x1,y1,x2,y2], conf, cls, model."""
         t0 = time.perf_counter()
         h, w = img.shape[:2]
-        tiled = max(h, w) > config.TILE_ABOVE_PX
         with self.lock:
             dets = self._run(img)
+            tiled = self._needs_tiles(dets, h, w)
             if tiled:
                 size = int(min(h, w, max(h, w) / 2))
                 for x, y in self._tiles(h, w, size):

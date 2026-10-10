@@ -1,6 +1,8 @@
 # ParkSpot — defence plan (CV track, 7:00 + 3:00 Q&A)
 
-Deck: https://claude.ai/artifact/23gmGjtuh7Xy78vXWJooJE (speaker script is in each slide's notes).
+Deck: [`docs/ParkSpot-defence.pptx`](ParkSpot-defence.pptx) — editable in PowerPoint, Google Slides or Canva
+(Canva: Create a design → Import file). Speaker script is in each slide's notes. The earlier web version
+(https://claude.ai/artifact/23gmGjtuh7Xy78vXWJooJE) does not show the map flow.
 Mode on slide 1: **Startup** (change to "Partner product" + owning unit if the team decides so).
 
 ## Slide-by-slide (timing follows the organisers' recommended split)
@@ -9,8 +11,8 @@ Mode on slide 1: **Startup** (change to "Partner product" + owning unit if the t
 |---|---|---|---|---|
 | 1 | Cover: ParkSpot, mode, team | Bahridin | 0:00–0:15 | Presentation |
 | 2 | Problem: driver, elderly driver, operator (payer) + our evidence | Bahridin | 0:15–1:00 | Impact |
-| 3 | One camera feed, four screens | Bahridin | 1:00–1:15 | Impact |
-| 4 | **Live demo** — jury's photo first | Bobur | 1:15–3:00 | Presentation, Technical |
+| 3 | From one camera to the right spot: map, booking, walk-in, entrance screen, operator | Bahridin | 1:00–1:15 | Impact |
+| 4 | **Live demo** — map, booking, jury's photo, operator | Bobur | 1:15–3:00 | Presentation, Technical |
 | 5 | Pipeline: a system, not one model call | Amirxon | 3:00–3:30 | Technical |
 | 6 | Replication test: 4 advantages | Amirxon | 3:30–4:10 | Innovation |
 | 7 | Measured numbers (dev vs test set, honestly labelled) | Amirxon | 4:10–4:40 | Technical |
@@ -36,16 +38,16 @@ Q&A owners: CV/model → Amirxon · app/demo/deploy → Bobur · business/pilot 
 
 - Dark navy `#0F1A2B` for cover, demo and close (same colour as the entrance screen), light
   `#F4F7FB` for content slides; blue `#1F5FE0` = product, amber `#F2A93B` = emphasis / numbers.
-- Space Grotesk (headings) + DM Sans (text); sizes 160/72/44/32/24 only.
+- Arial throughout, so the deck looks the same in PowerPoint, Google Slides and Canva.
 - Real screenshots of the running app only — no stock photos, no mock screens.
 - One idea per slide; numbers big, with the measurement conditions in the footer.
 
 ## Demo plan
 
-1. **Jury input first** (Vision): their photo → cars, rows, inferred empty spots, time in ms.
-2. Demo lot → live map → book a free spot → sandbox pay → QR ticket → directions.
-3. Entrance screen (elderly-friendly arrows).
-4. Operator view → event log ("booking moved", "camera confirmed parked").
+1. Map: the live lot (camera phone streaming) → Navigate opens Google Maps to the entrance → back.
+2. Free spots & booking → book a free spot → sandbox pay → QR ticket → directions.
+3. **Jury input** (Vision): their photo → cars, rows, inferred empty spots, time in ms.
+4. Operator view (PIN): pixelated camera + spot overlay, one-time spot check, event log.
 5. Close with "one CPU server, no GPU".
 
 Live site: https://parkspot-5bo4.onrender.com (QR on slides 4 and 12). `/api/health` shows the running commit.

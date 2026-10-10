@@ -62,8 +62,8 @@
    "free_spots_gt": 2
   },
   "latency_ms": {
-   "mean": 100.0,
-   "p95": 108.3
+   "mean": 81.0,
+   "p95": 85.1
   },
   "per_image": [
    {
@@ -148,8 +148,8 @@
     "free_spots_gt": 2
    },
    "latency_ms": {
-    "mean": 300.4,
-    "p95": 350.5
+    "mean": 337.4,
+    "p95": 451.2
    }
   },
   "rain": {
@@ -203,8 +203,8 @@
     "free_spots_gt": 2
    },
    "latency_ms": {
-    "mean": 184.1,
-    "p95": 189.1
+    "mean": 149.7,
+    "p95": 163.7
    }
   },
   "fog": {
@@ -258,8 +258,8 @@
     "free_spots_gt": 2
    },
    "latency_ms": {
-    "mean": 79.3,
-    "p95": 90.2
+    "mean": 68.6,
+    "p95": 76.3
    }
   },
   "blur": {
@@ -313,8 +313,8 @@
     "free_spots_gt": 2
    },
    "latency_ms": {
-    "mean": 71.6,
-    "p95": 81.9
+    "mean": 77.1,
+    "p95": 91.1
    }
   }
  },
@@ -327,7 +327,7 @@
   "free_recall": 1.0,
   "layout_recall": 1.0,
   "layout_precision": 1.0,
-  "latency_ms_mean": 100.0
+  "latency_ms_mean": 81.0
  },
- "evaluated_at": "2026-10-10 13:18:21"
+ "evaluated_at": "2026-10-10 13:23:49"
 }

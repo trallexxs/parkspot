@@ -9,7 +9,6 @@ cars. Cars that do not belong to any row (driving in the aisle) are ignored.
 * Video / several frames -> only boxes that stay put are used, so passing traffic is ignored and
   the layout fills in over time as different spots get used.
 """
-import itertools
 import string
 
 import numpy as np
@@ -29,6 +28,32 @@ def _from_row_frame(u1, v1, u2, v2, vertical):
     return [[u1, v1], [u2, v1], [u2, v2], [u1, v2]]
 
 
+def _best_line(pool, cu, cv, sv, chunk=4096):
+    """Of all lines through two box centres (|slope| <= 0.35), the one with the most centres
+    within ROW_ALIGN_TOL x box depth. Vectorised over all pairs (first maximum wins, pairs in
+    itertools.combinations order); returns its inliers in pool order."""
+    P = np.asarray(pool)
+    cuP, cvP, tol = cu[P], cv[P], config.ROW_ALIGN_TOL * sv[P]
+    I, J = np.triu_indices(len(P), 1)
+    best, best_n = [], 0
+    for s in range(0, len(I), chunk):
+        i, j = I[s:s + chunk], J[s:s + chunk]
+        du = cuP[j] - cuP[i]
+        ok = np.abs(du) >= 1e-6
+        slope = np.where(ok, (cvP[j] - cvP[i]) / np.where(ok, du, 1.0), 0.0)
+        ok &= np.abs(slope) <= 0.35
+        if not ok.any():
+            continue
+        i, slope = i[ok], slope[ok]
+        res = np.abs(cvP[None, :] - (cvP[i][:, None] + slope[:, None] * (cuP[None, :] - cuP[i][:, None])))
+        inl = res < tol[None, :]
+        counts = inl.sum(1)
+        k = int(counts.argmax())
+        if counts[k] > best_n:
+            best_n, best = int(counts[k]), [int(p) for p in P[inl[k]]]
+    return best
+
+
 def _find_rows(b, idx_pool):
     """Sequential RANSAC over box centres. b: (N,4) boxes in row frame."""
     cu = (b[:, 0] + b[:, 2]) / 2
@@ -38,18 +63,7 @@ def _find_rows(b, idx_pool):
     pool = list(idx_pool)
     rows = []
     while len(pool) >= config.ROW_MIN_CARS:
-        best = []
-        for i, j in itertools.combinations(pool, 2):
-            du = cu[j] - cu[i]
-            if abs(du) < 1e-6:
-                continue
-            slope = (cv[j] - cv[i]) / du
-            if abs(slope) > 0.35:
-                continue
-            res = np.abs(cv[pool] - (cv[i] + slope * (cu[pool] - cu[i])))
-            inl = [p for p, r in zip(pool, res) if r < config.ROW_ALIGN_TOL * sv[p]]
-            if len(inl) > len(best):
-                best = inl
+        best = _best_line(pool, cu, cv, sv)
         if len(best) < config.ROW_MIN_CARS:
             break
         # size consistency: drop boxes much bigger/smaller across the row than the median

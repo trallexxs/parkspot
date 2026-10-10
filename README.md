@@ -61,20 +61,19 @@ Inference runs **on a server CPU** (no GPU needed); cameras (an IP camera, or si
 tripod via `/camera`) only send JPEG frames. One server handles many cameras because a
 parking spot changes state on a scale of minutes: one frame every few seconds per camera is enough.
 
-## Measured speed (prototype hardware)
+## Measured speed
 
-Run time: **onnxruntime on CPU, no PyTorch** (2 threads), 4-core Intel Xeon @ 2.1 GHz,
-20 runs on a 640×360 frame:
+Run time: **onnxruntime on CPU, no PyTorch**. Two machines:
 
-| stage | mean | p95 |
-|---|---|---|
-| detection (2 models) | 142 ms | 165 ms |
-| layout + occupancy | 23 ms | 30 ms |
-| total | 168 ms | 199 ms |
+| machine | 640×360 frame | 1920×1080 photo | notes |
+|---|---|---|---|
+| 4-core Intel Xeon 2.1 GHz, 2 threads | 77 ms mean, 99 ms p95 (20 runs) | 86 ms (5 runs) | detector 61 ms, layout + occupancy 14 ms |
+| Render free web service (0.1 vCPU) | see the smoke-test log | see the smoke-test log | GitHub Actions `smoke` run against the live site |
 
-1920×1080 frame with tiling: 1 067 ms mean (5 runs). Server memory: ~325 MB steady, 382 MB peak
-(4K upload). The ONNX models give the same 41 vehicles on the reference frame as the PyTorch
-weights (`scripts/export_onnx.py` does the conversion).
+On top-down views the cascade skips the ground-view model (identical results on the dev set).
+Large photos are tiled only when the cars in them are tiny (far view: ~2 s on the 4-core machine).
+Server memory: ~300 MB steady, 374 MB peak (4K upload with tiling). The ONNX models give the same
+vehicles as the PyTorch weights on the reference frame (`scripts/export_onnx.py` converts them).
 
 ## Quality
 
@@ -96,6 +95,8 @@ found by auto-layout. Synthetic degradations of the same frames: night 92% accur
   (`CASCADE=0` switches it off).
 
 - Views where cars do not form clear rows (very oblique cameras, chaotic informal parking).
+- Very distant cars (about 10 px wide in the analysed image) are partly missed even with tiling:
+  29 of 41 in our synthetic far-view test.
 - Rows with fewer than 3 visible cars are not discovered automatically.
 - Empty spots at the very ends of a row are not inferred (no neighbour to measure the gap).
 - Night: dark cars are missed, so occupied spots can be shown as free (synthetic night: 33% of "free" answers correct).

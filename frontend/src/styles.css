@@ -148,7 +148,7 @@ input { font: inherit; padding: 11px 12px; border-radius: 12px; border: 1px soli
 .display-dir { background: #1c2a40; border-radius: 28px; padding: 4vh 4vw; display: flex; flex-direction: column; align-items: center; gap: 2vh; }
 .display-spot { font-size: clamp(72px, 14vw, 200px); font-weight: 800; color: #fbbf24; line-height: 1; }
 .display-steps { display: flex; align-items: center; gap: 3vw; color: #93c5fd; }
-.display-m { font-size: clamp(36px, 6vw, 80px); font-weight: 800; color: #fff; }
+.display-m { font-size: clamp(36px, 6vw, 80px); font-weight: 800; color: #fff; white-space: nowrap; }
 .display-text { font-size: clamp(20px, 3vw, 40px); }
 
 @media (prefers-color-scheme: dark) {

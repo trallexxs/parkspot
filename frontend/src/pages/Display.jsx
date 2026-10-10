@@ -27,20 +27,21 @@ export default function Display() {
   })();
   useEffect(() => { if (nearest) api.directions(id, nearest).then(setDir).catch(() => {}); else setDir(null); }, [id, nearest]);
 
-  const free = state?.counts.free ?? "–";
+  const online = state ? state.camera.online : true;
+  const free = !online ? "–" : state?.counts.free ?? "–";
   return (
     <div className="display">
       <div className="display-top">
         <div>
           <div className="display-name">{lot?.name}</div>
-          <div className={"display-free" + (free === 0 ? " full" : "")}>{free === 0 ? "FULL" : <>{free} <small>free</small></>}</div>
+          <div className={"display-free" + (free === 0 ? " full" : "")}>{!online ? <small>No live data</small> : free === 0 ? "FULL" : <>{free} <small>free</small></>}</div>
         </div>
         <div className="display-qr">
           <QR value={`${window.location.origin}/enter/${id}`} size={200} />
           <div>Scan to enter<br />pay before you leave</div>
         </div>
       </div>
-      {dir && (
+      {dir && online && (
         <div className="display-dir">
           <div className="display-spot">{nearest}</div>
           {dir.distance_m != null ? (

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { api, money } from "../api.js";
+import { ago, api, distanceKm, money } from "../api.js";
+import { operatorStore } from "../operatorStore.js";
+import { useLocation } from "../useLocation.js";
+import NavButtons from "../components/NavButtons.jsx";
 import { usePoll } from "../usePoll.js";
 import { addTicket } from "../storage.js";
 import SpotMap, { Legend } from "../components/SpotMap.jsx";
@@ -28,6 +31,8 @@ export default function Lot() {
   const [err, setErr] = useState("");
   const [showCam, setShowCam] = useState(false);
   const [tick, setTick] = useState(0);
+  const [me] = useLocation(true);
+  const opPin = operatorStore.pin(id);
 
   useEffect(() => { api.lot(id).then(setLot).catch((e) => setErr(e.message)); }, [id]);
   useEffect(() => {
@@ -53,28 +58,39 @@ export default function Lot() {
 
   if (!lot) return <div className="page"><div className="card">{err || "Loading…"}</div></div>;
   const c = state?.counts;
+  const online = state ? state.camera.online : lot.camera_online;
+  const sample = lot.kind === "sample";
+  const canSeeCamera = sample || !!opPin;
+  const km = distanceKm(me, lot.location);
   return (
     <div className="page">
       <header className="page-head">
         <h1>{lot.name}</h1>
         <div className="muted small">{lot.address}</div>
+        {sample && <div className="notice small">Sample lot: a replay of recorded public footage, processed live by our pipeline. Not a real place you can drive to.</div>}
+        {!sample && km != null && <div className="small">{km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`} from you (straight line)</div>}
+        {!sample && <NavButtons location={lot.location} />}
+        {!online && (
+          <div className="offline-banner">
+            The camera at this lot is offline (last frame {ago(state?.camera?.updated_at || lot.updated_at)}). Spot data cannot be confirmed, so booking is paused.
+          </div>
+        )}
         <div className="stats">
-          <div><b className="free-c">{c?.free ?? "–"}</b><span>free</span></div>
-          <div><b>{c?.occupied ?? "–"}</b><span>occupied</span></div>
-          <div><b className="res-c">{(c?.reserved ?? 0) + (c?.conflict ?? 0)}</b><span>reserved</span></div>
+          <div><b className="free-c">{online ? c?.free ?? "–" : "?"}</b><span>free</span></div>
+          <div><b>{online ? c?.occupied ?? "–" : "?"}</b><span>occupied</span></div>
+          <div><b className="res-c">{(c?.reserved ?? 0) + (c?.conflict ?? 0)}</b><span>booked</span></div>
         </div>
         <LiveBadge camera={state?.camera} />
         <div className="row-btns">
-          <button className="btn ghost" onClick={() => setShowCam((v) => !v)}>{showCam ? "Hide camera" : "Show camera view"}</button>
+          {canSeeCamera && <button className="btn ghost" onClick={() => setShowCam((v) => !v)}>{showCam ? "Hide camera" : "Show camera view"}</button>}
           <a className="btn ghost" href={`/enter/${id}`}>Walk-in (QR) flow</a>
           <a className="btn ghost" href={`/display/${id}`} target="_blank" rel="noreferrer">Entrance screen</a>
-          <a className="btn ghost" href={`/operator/${id}`}>Operator view</a>
-          {lot.camera?.type === "push" && <a className="btn ghost" href={`/camera/${id}`}>Use this phone as camera</a>}
+          {(sample || opPin) && <a className="btn ghost" href={`/operator/${id}`}>Operator view</a>}
         </div>
-        {showCam && (
+        {showCam && canSeeCamera && (
           <figure className="camera">
-            <img src={`/api/lots/${id}/frame.jpg?t=${tick}`} alt="camera view with detected spots" />
-            <figcaption className="muted small">{state?.camera?.label}</figcaption>
+            <img src={`/api/lots/${id}/frame.jpg?t=${tick}${opPin ? `&pin=${encodeURIComponent(opPin)}` : ""}`} alt="camera view with detected spots" />
+            <figcaption className="muted small">{sample ? state?.camera?.label : "Operator view · image pixelated for privacy (plates and faces unreadable)"}</figcaption>
           </figure>
         )}
       </header>
@@ -103,7 +119,7 @@ export default function Lot() {
             </div>
           </label>
           {err && <div className="error small">{err}</div>}
-          <button className="btn primary wide" disabled={busy} onClick={book}>Book {selected} · {money(price, lot.currency)}</button>
+          <button className="btn primary wide" disabled={busy || !online} onClick={book}>{online ? `Book ${selected} · ${money(price, lot.currency)}` : "Booking paused: camera offline"}</button>
         </div>
       )}
     </div>

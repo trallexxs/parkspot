@@ -68,7 +68,7 @@ export default function Enter() {
               <Directions d={s.directions} big />
             </>
           ) : (
-            <div className="notice">The camera sees no free spot right now. Please wait at the entrance or try a nearby lot.</div>
+            <div className="notice">No confirmed free spot right now (the lot is full, or its camera is offline). Please wait at the entrance or try a nearby lot on the map.</div>
           )}
         </div>
       )}

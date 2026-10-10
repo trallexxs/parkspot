@@ -1,6 +1,6 @@
 {
  "id": "demo",
- "name": "Demo lot (drone footage)",
+ "name": "Sample lot (recorded drone footage)",
  "price_per_hour": 5000,
  "currency": "UZS",
  "camera": {
@@ -980,5 +980,6 @@
   "spots": 41
  },
  "address": "Replay of public sample footage \u2014 stands in for a real lot camera",
- "metres_per_spot": 2.5
+ "metres_per_spot": 2.5,
+ "kind": "sample"
 }

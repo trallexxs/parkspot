@@ -1,18 +1,22 @@
 """Lot registry, live camera workers and the merge of camera occupancy with bookings."""
+import hashlib
 import json
 import math
+import secrets
+import string
 import threading
 import time
 from datetime import timedelta
 
 import cv2
+import numpy as np
 
 from . import config, store
 from .cv import pipeline
 from .cv import detector as detector_priority
 from .cv.detector import get_detector
 from .cv.occupancy import SpotSmoother, spot_scores
-from .guidance import directions
+from .guidance import assign_aisle_rows, directions
 
 
 class Lot:
@@ -35,8 +39,33 @@ class Lot:
     def spots(self):
         return self.cfg["spots"]
 
+    @property
+    def kind(self):
+        return lot_kind(self.cfg)
+
     def process(self, img, smooth=True):
-        return self.apply(pipeline.analyze(img, spots=self.spots), smooth)
+        return self.apply(pipeline.analyze(self.fit_frame(img), spots=self.spots), smooth)
+
+    def fit_frame(self, img):
+        """Spots are drawn in the frame size the lot was set up with: bring new frames to that size."""
+        cam = self.cfg.get("camera", {})
+        w, h = cam.get("width"), cam.get("height")
+        if not w or not h or (img.shape[1], img.shape[0]) == (w, h):
+            return img
+        if abs(img.shape[1] / img.shape[0] - w / h) > 0.03:
+            raise ValueError(f"frame is {img.shape[1]}x{img.shape[0]} but this lot was set up on a "
+                             f"{w}x{h} view: keep the camera phone in the same orientation")
+        return cv2.resize(img, (w, h), interpolation=cv2.INTER_AREA)
+
+    def save(self):
+        """Real lots: write the config (spots, aisles, location, PIN hash). On free hosting this disk is
+        wiped on restart, so the camera phone keeps a copy and restores it (see /import)."""
+        if self.kind != "real":
+            return
+        d = config.LOTS_DIR / "user"
+        d.mkdir(parents=True, exist_ok=True)
+        self.path = d / f"{self.id}.json"
+        self.path.write_text(json.dumps(self.cfg, indent=1))
 
     def apply(self, res, smooth=True):
         """Take an analysis of this lot's camera frame (same spot ids) as the current state."""
@@ -103,32 +132,149 @@ def load_all():
         cam = cfg.get("camera", {})
         if cam.get("type") == "video":
             CameraWorker(lot).start()
-        elif cam.get("type") in ("image", "push") and cam.get("path"):
+        elif cam.get("type") == "image" and cam.get("path"):
             img = cv2.imread(str(config.ROOT_DIR / cam["path"]))
             if img is not None:
                 lot.process(img, smooth=False)
+        # "push" lots (a phone camera) wait for their camera: frames are never written to disk
+
+
+def lot_kind(cfg):
+    return cfg.get("kind") or ("real" if cfg.get("user_created") else "sample")
+
+
+def hash_pin(pin, salt=None):
+    salt = salt or secrets.token_hex(8)
+    return f"{salt}:{hashlib.sha256((salt + str(pin)).encode()).hexdigest()}"
+
+
+def check_pin(cfg, pin):
+    h = cfg.get("pin_hash")
+    if not h or not pin:
+        return False
+    salt = h.split(":", 1)[0]
+    return secrets.compare_digest(hash_pin(str(pin).strip(), salt), h)
+
+
+def new_pin():
+    return f"{secrets.randbelow(10**6):06d}"
+
+
+def camera_online(lot):
+    if lot.cfg.get("camera", {}).get("type") == "video":
+        return True
+    if not lot.updated_at:
+        return False
+    return (store.now() - store.parse(lot.updated_at)).total_seconds() < config.CAMERA_OFFLINE_S
 
 
 def create_from_analysis(name, img, res):
+    """A real lot from one camera view. Returns (lot, pin): the PIN is shown once to the operator.
+    The photo itself is not stored; the lot waits for its camera's frames."""
     lot_id = store.new_id("lot")
-    (config.LOTS_DIR / "user").mkdir(parents=True, exist_ok=True)
-    img_dir = config.DATA_DIR / "user_lots"
-    img_dir.mkdir(parents=True, exist_ok=True)
-    img_path = img_dir / f"{lot_id}.jpg"
-    cv2.imwrite(str(img_path), img)
+    pin = new_pin()
     spots = [{k: s[k] for k in ("id", "row", "polygon", "source")} for s in res["spots"]]
-    cfg = {"id": lot_id, "name": name or "My lot", "address": "Created from a photo",
-           "price_per_hour": 5000, "currency": "UZS",
-           "camera": {"type": "push", "path": str(img_path.relative_to(config.ROOT_DIR)),
-                      "label": "Photo / phone camera (send new frames to update)",
+    cfg = {"id": lot_id, "kind": "real", "name": name or "My lot", "address": "",
+           "price_per_hour": 5000, "currency": "UZS", "location": None,
+           "published": False, "confirmed": False, "pin_hash": hash_pin(pin),
+           "camera": {"type": "push", "label": "Phone camera at the lot",
                       "width": res["image"]["width"], "height": res["image"]["height"]},
-           "aisles": [], "spots": spots, "user_created": True}
-    path = config.LOTS_DIR / "user" / f"{lot_id}.json"
-    path.write_text(json.dumps(cfg, indent=1))
-    lot = Lot(cfg, path)
+           "aisles": [], "spots": spots, "created_at": store.iso(store.now())}
+    lot = Lot(cfg)
     LOTS[lot_id] = lot
+    lot.save()
     lot.apply(res, smooth=False)  # the analysis that found the spots is also the first frame
     store.log(lot_id, "lot_created", spots=len(spots))
+    return lot, pin
+
+
+def restore(cfg):
+    """Re-create a real lot from its exported config (after a server restart wiped it)."""
+    if lot_kind(cfg) != "real" or not cfg.get("pin_hash") or not cfg.get("id"):
+        raise ValueError("not an exported real lot")
+    lot = Lot(cfg)
+    LOTS[lot.id] = lot
+    lot.save()
+    store.log(lot.id, "lot_restored")
+    return lot
+
+
+def _centre(poly):
+    return np.asarray(poly, float).mean(axis=0)
+
+
+def renumber_spots(new_spots, old_spots):
+    """Operator-edited spots -> rows and ids. Kept spots keep their row; an added spot joins the
+    row of the nearest spot if it is close, else starts a new row. Ids are re-assigned in order
+    along each row (A1, A2, ...)."""
+    rows_known = {s["id"]: s["row"] for s in old_spots}
+    placed = []
+    for s in new_spots:
+        poly = [[float(x), float(y)] for x, y in s["polygon"]]
+        row = s.get("row") or rows_known.get(s.get("id"))
+        placed.append({"polygon": poly, "row": row, "source": s.get("source", "operator")})
+    used = {p["row"] for p in placed if p["row"]}
+    letters = (c for c in string.ascii_uppercase if c not in used)
+    for p in placed:
+        if p["row"]:
+            continue
+        c = _centre(p["polygon"])
+        size = np.ptp(np.asarray(p["polygon"], float), axis=0).max()
+        best, best_d = None, 1.5 * size
+        for q in placed:
+            if q is p or not q["row"]:
+                continue
+            d = float(np.linalg.norm(_centre(q["polygon"]) - c))
+            if d < best_d:
+                best, best_d = q["row"], d
+        p["row"] = best or next(letters, "Z")
+    out = []
+    for row in sorted({p["row"] for p in placed}):
+        members = [p for p in placed if p["row"] == row]
+        cs = np.array([_centre(p["polygon"]) for p in members])
+        axis = 0 if np.ptp(cs[:, 0]) >= np.ptp(cs[:, 1]) else 1
+        for n, p in enumerate(sorted(members, key=lambda p: _centre(p["polygon"])[axis]), 1):
+            out.append({"id": f"{row}{n}", "row": row, "polygon": p["polygon"], "source": p["source"]})
+    return out
+
+
+def apply_setup(lot, spots=None, aisles=None, info=None):
+    """Operator's one-time check of a real lot: spots, aisles (entrance side first), name, place."""
+    cfg = lot.cfg
+    if spots is not None:
+        if len(spots) < 1:
+            raise ValueError("a lot needs at least one spot")
+        cfg["spots"] = renumber_spots(spots, cfg["spots"])
+        cfg["confirmed"] = True
+        cfg["confirmed_at"] = store.iso(store.now())
+        with lot.lock:  # re-score the last frame against the corrected spots, restart smoothing
+            lot.smoother = SpotSmoother()
+            sc = spot_scores(cfg["spots"], lot.dets)
+            lot.cv = {x["id"]: {"occupied": x["occupied"], "p": 1.0 if x["occupied"] else 0.0} for x in sc}
+    if aisles is not None:
+        cfg["aisles"] = [{"id": f"a{i + 1}", "name": a.get("name") or f"Aisle {i + 1}",
+                          "start": [float(v) for v in a["start"]], "end": [float(v) for v in a["end"]]}
+                         for i, a in enumerate(aisles)]
+    if spots is not None or aisles is not None:
+        assign_aisle_rows(cfg)
+    if info:
+        for k in ("name", "address"):
+            if k in info and info[k] is not None:
+                cfg[k] = str(info[k])[:120]
+        if info.get("price_per_hour") is not None:
+            cfg["price_per_hour"] = max(0, int(info["price_per_hour"]))
+        if info.get("location"):
+            lat, lng = float(info["location"]["lat"]), float(info["location"]["lng"])
+            if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+                raise ValueError("location out of range")
+            cfg["location"] = {"lat": lat, "lng": lng}
+        if "published" in info:
+            if info["published"] and not (cfg.get("location") and cfg.get("confirmed")):
+                raise ValueError("set the location and check the spots before publishing")
+            cfg["published"] = bool(info["published"])
+    lot.save()
+    store.log(lot.id, "lot_setup_saved", spots=len(cfg["spots"]), aisles=len(cfg.get("aisles", [])),
+              published=cfg.get("published", False))
     return lot
 
 
@@ -192,7 +338,12 @@ def state(lot):
     held = _held_bookings(lot.id, now)
     walk = _walkin_holds(lot.id, now)
 
-    raw = {s["id"]: ("occupied" if cv.get(s["id"], {}).get("occupied") else "free") for s in lot.spots}
+    if lot.updated_at is None:
+        # no camera frame yet (new server, camera phone not started): we do not know, so we do not
+        # guess. Unknown spots are never offered as free, booked or suggested.
+        raw = {s["id"]: "unknown" for s in lot.spots}
+    else:
+        raw = {s["id"]: ("occupied" if cv.get(s["id"], {}).get("occupied") else "free") for s in lot.spots}
     statuses = dict(raw)
     for sid in walk:
         if raw.get(sid) == "free":
@@ -221,20 +372,41 @@ def state(lot):
                 statuses[new] = "reserved"
                 statuses[sid] = "occupied"
 
-    counts = {k: sum(1 for v in statuses.values() if v == k) for k in ("free", "occupied", "reserved", "conflict")}
+    counts = {k: sum(1 for v in statuses.values() if v == k)
+              for k in ("free", "occupied", "reserved", "conflict", "unknown")}
     return {"lot_id": lot.id, "statuses": statuses, "counts": counts, "total": len(lot.spots),
             "camera": {"updated_at": lot.updated_at, "frames_processed": lot.frames_processed,
-                       "timing": lot.timing, "quality": lot.quality,
+                       "timing": lot.timing, "quality": lot.quality, "online": camera_online(lot),
                        "label": lot.cfg.get("camera", {}).get("label", "")},
             "server_time": store.iso(now)}
 
 
+def pixelate(img, width):
+    """Plates and faces unreadable, cars and lane markings still visible."""
+    h, w = img.shape[:2]
+    if w <= width:
+        return img
+    small = cv2.resize(img, (width, max(1, round(h * width / w))), interpolation=cv2.INTER_AREA)
+    return cv2.resize(small, (w, h), interpolation=cv2.INTER_NEAREST)
+
+
 def annotated_jpeg(lot, statuses):
+    """Spot overlay on the camera image. Real lots: the image is pixelated first (privacy)."""
     with lot.lock:
         if lot.frame is None:
             return None
-        img = pipeline.draw(lot.frame, lot.spots, lot.dets, status=statuses)
+        frame = lot.frame if lot.kind == "sample" else pixelate(lot.frame, config.PIXELATE_VIEW_W)
+        img = pipeline.draw(frame, lot.spots, lot.dets, status=statuses)
     return pipeline.to_jpeg(img)
+
+
+def raw_jpeg(lot):
+    """Camera image without overlay for the operator's spot editor (pixelated for real lots)."""
+    with lot.lock:
+        if lot.frame is None:
+            return None
+        frame = lot.frame if lot.kind == "sample" else pixelate(lot.frame, config.PIXELATE_EDIT_W)
+    return pipeline.to_jpeg(frame)
 
 
 def price(lot, minutes):

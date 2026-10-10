@@ -3,7 +3,7 @@ import json
 import os
 from datetime import timedelta
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -39,15 +39,37 @@ def health():
 
 # ------------------------------------------------------------------ lots
 
+def require_operator(lot, pin):
+    """Real lots: the camera image, events, camera frames and setup need the lot's PIN."""
+    if lot.kind == "sample":
+        return
+    if not lots.check_pin(lot.cfg, pin):
+        raise HTTPException(403, "operator PIN required")
+
+
+def lot_summary(lot):
+    st = lots.state(lot)
+    c = lot.cfg
+    sample = lot.kind == "sample"
+    return {"id": lot.id, "name": c["name"], "address": c.get("address", ""), "kind": lot.kind,
+            "location": c.get("location"), "published": c.get("published", sample),
+            "confirmed": c.get("confirmed", sample),
+            "price_per_hour": c.get("price_per_hour"), "currency": c.get("currency"),
+            "counts": st["counts"], "total": st["total"],
+            "camera_online": st["camera"]["online"], "updated_at": st["camera"]["updated_at"]}
+
+
 @app.get("/api/lots")
-def list_lots():
+def list_lots(scope: str = "map"):
+    """map: real lots an operator has checked, placed on the map and published.
+    sample: recorded demo lots (never shown to drivers as real places)."""
     out = []
     for lot in lots.LOTS.values():
-        st = lots.state(lot)
-        out.append({"id": lot.id, "name": lot.cfg["name"], "address": lot.cfg.get("address", ""),
-                    "price_per_hour": lot.cfg.get("price_per_hour"), "currency": lot.cfg.get("currency"),
-                    "counts": st["counts"], "total": st["total"],
-                    "user_created": lot.cfg.get("user_created", False)})
+        if scope == "map" and not (lot.kind == "real" and lot.cfg.get("published")):
+            continue
+        if scope == "sample" and lot.kind != "sample":
+            continue
+        out.append(lot_summary(lot))
     return out
 
 
@@ -55,10 +77,9 @@ def list_lots():
 def lot_detail(lot_id: str):
     lot = get_lot(lot_id)
     c = lot.cfg
-    return {"id": lot.id, "name": c["name"], "address": c.get("address", ""),
-            "price_per_hour": c.get("price_per_hour"), "currency": c.get("currency"),
-            "camera": c.get("camera", {}), "map": aisle_map(c),
-            "spots": c["spots"], "aisles": c.get("aisles", [])}
+    cam = {k: v for k, v in c.get("camera", {}).items() if k in ("type", "label", "width", "height")}
+    return {**lot_summary(lot), "camera": cam, "map": aisle_map(c), "spots": c["spots"],
+            "aisles": c.get("aisles", [])}
 
 
 @app.get("/api/lots/{lot_id}/state")
@@ -67,12 +88,25 @@ def lot_state(lot_id: str):
 
 
 @app.get("/api/lots/{lot_id}/frame.jpg")
-def lot_frame(lot_id: str):
+def lot_frame(lot_id: str, pin: str = "", x_lot_pin: str | None = Header(None)):
+    """Camera image with the spot overlay. Real lots: operator only, image pixelated."""
     lot = get_lot(lot_id)
+    require_operator(lot, x_lot_pin or pin)
     st = lots.state(lot)
     jpg = lots.annotated_jpeg(lot, st["statuses"])
     if jpg is None:
         raise HTTPException(404, "no frame yet")
+    return Response(jpg, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/lots/{lot_id}/raw.jpg")
+def lot_raw(lot_id: str, pin: str = "", x_lot_pin: str | None = Header(None)):
+    """Camera image without overlay, for the operator's spot editor (pixelated for real lots)."""
+    lot = get_lot(lot_id)
+    require_operator(lot, x_lot_pin or pin)
+    jpg = lots.raw_jpeg(lot)
+    if jpg is None:
+        raise HTTPException(404, "no frame yet: start the camera phone first")
     return Response(jpg, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
@@ -85,31 +119,92 @@ def lot_directions(lot_id: str, spot_id: str):
 
 
 @app.get("/api/lots/{lot_id}/events")
-def lot_events(lot_id: str):
-    get_lot(lot_id)
+def lot_events(lot_id: str, x_lot_pin: str | None = Header(None)):
+    lot = get_lot(lot_id)
+    require_operator(lot, x_lot_pin)
     return store.events(lot_id)
 
 
+class PinIn(BaseModel):
+    pin: str
+
+
+@app.post("/api/lots/{lot_id}/auth")
+def lot_auth(lot_id: str, body: PinIn):
+    lot = get_lot(lot_id)
+    if lot.kind != "real" or not lots.check_pin(lot.cfg, body.pin):
+        raise HTTPException(403, "wrong PIN")
+    return {"ok": True}
+
+
+class SetupIn(BaseModel):
+    spots: list[dict] | None = None
+    aisles: list[dict] | None = None
+    info: dict | None = None
+
+
+@app.put("/api/lots/{lot_id}/setup")
+def lot_setup(lot_id: str, body: SetupIn, x_lot_pin: str | None = Header(None)):
+    """Operator's one-time check: corrected spots, aisles (entrance first), name, address, price,
+    GPS location, publish to the drivers' map."""
+    lot = get_lot(lot_id)
+    if lot.kind != "real":
+        raise HTTPException(400, "the sample lot cannot be edited")
+    require_operator(lot, x_lot_pin)
+    try:
+        lots.apply_setup(lot, body.spots, body.aisles, body.info)
+    except (ValueError, KeyError, TypeError, IndexError) as e:
+        raise HTTPException(400, str(e))
+    return lot_detail(lot_id)
+
+
+@app.get("/api/lots/{lot_id}/export")
+def lot_export(lot_id: str, x_lot_pin: str | None = Header(None)):
+    """The lot's full config, kept by the operator's devices to restore it after a server restart."""
+    lot = get_lot(lot_id)
+    if lot.kind != "real":
+        raise HTTPException(400, "only real lots are exported")
+    require_operator(lot, x_lot_pin)
+    return lot.cfg
+
+
+@app.post("/api/lots/import")
+def lot_import(cfg: dict = Body(...), x_lot_pin: str | None = Header(None)):
+    if cfg.get("id") in lots.LOTS:
+        return {"id": cfg["id"], "restored": False}
+    if not lots.check_pin(cfg, x_lot_pin):
+        raise HTTPException(403, "PIN does not match this lot")
+    try:
+        lot = lots.restore(cfg)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"id": lot.id, "restored": True}
+
+
 @app.post("/api/lots/{lot_id}/frame")
-async def push_frame(lot_id: str, image: UploadFile = File(...), live: bool = Form(False)):
-    """A phone or IP camera sends a new frame for this lot (live=true smooths over frames)."""
+async def push_frame(lot_id: str, image: UploadFile = File(...), live: bool = Form(False),
+                     x_lot_pin: str | None = Header(None)):
+    """The lot's camera (a phone at the lot) sends a new frame (live=true smooths over frames)."""
     lot = get_lot(lot_id)
     if lot.cfg.get("camera", {}).get("type") == "video":
         raise HTTPException(400, "this lot is fed by a recorded camera; create your own lot to stream frames")
+    require_operator(lot, x_lot_pin)
     data = await image.read()
 
     def work():  # CPU-bound: off the event loop, ahead of the replay camera
         with lots.interactive():
-            return lot.process(_read_image(data), smooth=live)
+            try:
+                return lot.process(_read_image(data), smooth=live)
+            except ValueError as e:
+                raise HTTPException(409, str(e))
     res = await run_in_threadpool(work)
-    if lot.cfg.get("camera", {}).get("type") == "push":
-        lot.cfg["camera"]["label"] = "Live phone camera" if live else lot.cfg["camera"].get("label", "")
     return {"timing": res["timing"], "summary": res["summary"]}
 
 
 @app.post("/api/lots")
 async def create_lot(image: UploadFile = File(...), name: str = Form("My lot")):
-    """Zero-config onboarding: one photo of a lot -> discovered spots -> bookable lot."""
+    """Zero-config onboarding: one camera view of a lot -> discovered spots -> an unpublished real lot.
+    The operator gets a PIN once, checks the spots, places the lot on the map and publishes it."""
     data = await image.read()
 
     def work():
@@ -118,9 +213,9 @@ async def create_lot(image: UploadFile = File(...), name: str = Form("My lot")):
             return img, pipeline.analyze(img)
     img, res = await run_in_threadpool(work)
     if len(res["spots"]) < 3:
-        raise HTTPException(422, "Could not find parking rows in this photo (need 3+ parked cars in a row).")
-    lot = lots.create_from_analysis(name, img, res)
-    return {"id": lot.id, "spots": len(lot.spots)}
+        raise HTTPException(422, "Could not find parking rows in this view (need 3+ parked cars in a row).")
+    lot, pin = lots.create_from_analysis(name, img, res)
+    return {"id": lot.id, "spots": len(lot.spots), "pin": pin}
 
 
 # ------------------------------------------------------------------ vision console
@@ -180,7 +275,10 @@ def create_booking(lot_id: str, body: BookingIn):
         b0 = store.parse(b["arrive_at"])
         if b0 < end and arrive < b0 + timedelta(minutes=b["duration_min"]):
             raise HTTPException(409, "spot already booked for that time")
-    st = lots.state(lot)["statuses"].get(body.spot_id)
+    st_all = lots.state(lot)
+    st = st_all["statuses"].get(body.spot_id)
+    if st == "unknown" or not st_all["camera"]["online"]:
+        raise HTTPException(409, "this lot's camera is offline: free spots cannot be confirmed right now")
     soon = arrive - now < timedelta(minutes=config.BOOKING_HOLD_BEFORE_MIN)
     if soon and st != "free":
         raise HTTPException(409, f"spot is {st} right now, pick a free one")
@@ -286,7 +384,7 @@ def _get_session(sid):
 def start_session(lot_id: str):
     lot = get_lot(lot_id)
     st = lots.state(lot)
-    spot = lots.nearest_free(lot, st["statuses"])
+    spot = lots.nearest_free(lot, st["statuses"]) if st["camera"]["online"] else None
     sid = store.new_id("ss")
     store.q("INSERT INTO sessions (id, lot_id, spot_id, started_at, status) VALUES (?,?,?,?,?)",
             (sid, lot_id, spot, store.iso(store.now()), "active"))

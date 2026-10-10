@@ -1,17 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { loadAndResize } from "../imageUtil.js";
 
 /** CV console: any photo of a parking lot -> vehicles, discovered spots, occupancy, timing.
  *  This is where the jury's own image goes. */
 export default function Vision() {
-  const nav = useNavigate();
-  const [file, setFile] = useState(null);
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [name, setName] = useState("My lot");
   const [metrics, setMetrics] = useState(null);
 
   useEffect(() => { api.metrics().then(setMetrics).catch(() => {}); }, []);
@@ -20,14 +17,8 @@ export default function Vision() {
     setRes(null); setErr(""); setBusy(true);
     try {
       const small = (await loadAndResize(f)).file;
-      setFile(small);
       setRes(await api.analyze(small));
     } catch (e) { setErr(e.message); }
-    setBusy(false);
-  }
-  async function makeLot() {
-    setBusy(true);
-    try { const r = await api.createLot(file, name); nav(`/lot/${r.id}`); } catch (e) { setErr(e.message); }
     setBusy(false);
   }
 
@@ -66,15 +57,11 @@ export default function Vision() {
             <div className="kv"><span>Detector</span><b>{Math.round(res.detector.ms)} ms{res.detector.tiled ? ", tiled" : ""}</b></div>
             {res.quality.warnings.map((w) => <div key={w} className="notice small">{w}</div>)}
           </div>
-          {res.spots.length >= 3 && (
-            <div className="card">
-              <h3>Turn this photo into a bookable lot</h3>
-              <div className="inline">
-                <input value={name} onChange={(e) => setName(e.target.value)} />
-                <button className="btn primary" disabled={busy} onClick={makeLot}>Create lot</button>
-              </div>
-            </div>
-          )}
+          <div className="card">
+            <h3>Make this a live lot</h3>
+            <div className="muted small">A live lot needs a camera that stays there: set it up from the phone you will mount at the lot.</div>
+            <Link className="btn primary" to="/operator">Set up a live lot →</Link>
+          </div>
         </>
       )}
 
@@ -82,7 +69,8 @@ export default function Vision() {
         <div className="row-btns">
           <Link className="btn ghost" to="/quality">Measured quality{metrics?.available ? ` (${metrics.summary.images} photos)` : ""}</Link>
           <Link className="btn ghost" to="/label">Build the test set</Link>
-          <Link className="btn ghost" to="/camera">Phone as lot camera</Link>
+          <Link className="btn ghost" to="/operator">Parking operators</Link>
+          <Link className="btn ghost" to="/lot/demo">Sample lot (recorded)</Link>
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ export default function BottomNav() {
   );
   return (
     <nav className="bottom-nav">
-      {item("/", HomeIcon, "Home")}
+      {item("/", HomeIcon, "Map")}
       {item("/tickets", TicketIcon, "My tickets")}
       {item("/vision", CameraIcon, "Vision")}
     </nav>

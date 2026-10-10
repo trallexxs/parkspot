@@ -33,6 +33,7 @@ BLUR_VAR_MIN = 60.0         # Laplacian variance at 640 px below this => blurry
 # Occupancy
 SPOT_COVER_MIN = 0.30       # intersection / spot area
 DET_INSIDE_MIN = 0.50       # intersection / detection area (when the box centre is inside the spot)
+FOOT_FRAC = 0.2             # a car's ground point: 20% of its box height above the box bottom
 EMA_ALPHA = 0.5             # temporal smoothing for live camera feeds
 EMA_ON, EMA_OFF = 0.6, 0.4  # hysteresis thresholds
 
@@ -45,6 +46,11 @@ LAYOUT_INFERRED_PENALTY = 0.5 # score of a reading = cars explained - 0.5 x spot
 # Live camera worker
 CAMERA_INTERVAL_S = float(os.environ.get("CAMERA_INTERVAL_S", "1.5"))
 CAMERA_IDLE_AFTER_S = 60      # replay camera pauses when no one has looked at the lot for this long
+
+# Real lots (phone camera)
+CAMERA_OFFLINE_S = 120        # no frame for this long => the lot is shown as "camera offline"
+PIXELATE_VIEW_W = 240         # operator view: camera image pixelated to this width (privacy)
+PIXELATE_EDIT_W = 320         # spot editor: a little more detail to see the lane markings
 
 # Business rules (assumptions, stated in the README)
 BOOKING_GRACE_MIN = 15      # booked spot is held this long after the arrival time

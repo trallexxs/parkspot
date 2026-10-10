@@ -10,6 +10,8 @@ import Vision from "./pages/Vision.jsx";
 import Camera from "./pages/Camera.jsx";
 import Operator from "./pages/Operator.jsx";
 import Label from "./pages/Label.jsx";
+import OperatorHome from "./pages/OperatorHome.jsx";
+import Setup from "./pages/Setup.jsx";
 import Quality from "./pages/Quality.jsx";
 
 export default function App() {
@@ -29,7 +31,9 @@ export default function App() {
           <Route path="/vision" element={<Vision />} />
           <Route path="/camera" element={<Camera />} />
           <Route path="/camera/:id" element={<Camera />} />
+          <Route path="/operator" element={<OperatorHome />} />
           <Route path="/operator/:id" element={<Operator />} />
+          <Route path="/operator/:id/setup" element={<Setup />} />
           <Route path="/label" element={<Label />} />
           <Route path="/quality" element={<Quality />} />
         </Routes>

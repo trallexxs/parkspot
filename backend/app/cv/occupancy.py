@@ -26,11 +26,18 @@ def spot_scores(spots, detections):
             if inter <= 0:
                 continue
             d_area = max(1e-6, float(cv2.contourArea(dp)))
-            cx, cy = (d["box"][0] + d["box"][2]) / 2, (d["box"][1] + d["box"][3]) / 2
+            x1, y1, x2, y2 = d["box"]
+            cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+            # where the car stands: near the bottom of its box. From a pole or a window a car's box
+            # also covers the spot behind it; its ground point does not.
+            fx, fy = cx, y2 - config.FOOT_FRAC * (y2 - y1)
+            on_spot = cv2.pointPolygonTest(sp, (float(fx), float(fy)), False) >= 0
             inside = cv2.pointPolygonTest(sp, (float(cx), float(cy)), False) >= 0
             cover = inter / s_area
             fill = inter / d_area
-            if cover >= config.SPOT_COVER_MIN or (inside and fill >= config.DET_INSIDE_MIN):
+            # cautious on purpose: any sign of a car makes the spot occupied. A hidden free spot costs
+            # a driver a few metres; a "free" spot that is taken sends them to the wrong place.
+            if on_spot or cover >= config.SPOT_COVER_MIN or (inside and fill >= config.DET_INSIDE_MIN):
                 score = min(1.0, 0.5 + 0.5 * max(cover, fill)) * (0.5 + 0.5 * d["conf"])
                 if score > best:
                     best, best_k = score, k

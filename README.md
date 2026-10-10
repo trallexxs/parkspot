@@ -31,16 +31,40 @@ guides them to the spot ("B5: straight 23 m, then right") — on the phone and o
 
 | URL | who | what |
 |---|---|---|
-| `/` | driver | lots with live free counts |
-| `/lot/:id` | driver | live spot map, book a spot (sandbox pay), directions |
+| `/` | driver | **map** (OpenStreetMap) of real, published lots with live free counts from each lot's camera; distance from the driver; *Navigate* opens Google Maps or Yandex to the lot entrance |
+| `/lot/:id` | driver | spot map, booking (sandbox pay), in-lot directions ("B5: straight 25 m, then right"); booking pauses if the camera is offline |
 | `/booking/:id` | driver | ticket with QR, check-in at the gate, live status |
 | `/enter/:id` | driver | walk-in: QR at the gate → suggested spot → pay before exit |
 | `/display/:id` | entrance screen | free count, nearest spot with big arrows, QR to enter |
-| `/camera` | operator | **turn any phone into the lot camera**: create a lot from the live view (auto spot discovery), then stream a frame every 3 s |
-| `/operator/:id` | operator | annotated live camera, counts, event log (spot taken → booking moved, etc.) |
-| `/vision` | anyone / jury | upload any lot photo → vehicles, discovered spots, occupancy, timing |
-| `/label` | team | model-assisted labelling of our test set (every spot checked by a person), export JSON |
-| `/quality` | anyone / jury | measured results from `eval/evaluate.py` (nothing typed by hand) |
+| `/operator` | operator | set up a new lot with a camera phone, or open a lot this device manages |
+| `/camera`, `/camera/:id` | operator | **the phone at the lot**: creates the lot (spots found automatically, PIN shown once), then sends a picture every 3–10 s |
+| `/operator/:id/setup` | operator | one-time check: delete wrong spots, draw missed ones, draw the aisle (entrance first), place the entrance on the map (GPS or drag), publish |
+| `/operator/:id` | operator (PIN) | pixelated camera with spot overlay, counts, events, gate QR to print, backup |
+| `/vision` | anyone / jury | any lot photo → vehicles, discovered spots, occupancy, timing |
+| `/lot/demo` | anyone | **sample** lot: replay of a recorded public video, never shown on the drivers' map |
+
+## Real lots: what is real, and how a lot goes live
+
+1. A phone is mounted above the lot (window or pole, charging) and opens `/camera`. Its first
+   picture is analysed: rows and spots are discovered automatically. The operator gets a PIN.
+2. The operator checks the spots once (`/operator/:id/setup`): removes anything that is not a
+   parking spot, draws missed ones, draws the driving aisle from the entrance, places the entrance
+   on the map with the phone's GPS, and publishes. Only then does the lot appear on the drivers' map.
+3. From then on every status a driver sees comes from that camera: occupied/free from the latest
+   picture (smoothed over pictures), booked only from real bookings made in the app.
+   **No camera picture yet, or none for 2 minutes → the lot shows "camera offline", spots show
+   "no data", and booking pauses.** Nothing is guessed.
+4. Privacy: camera pictures are processed in memory and never written to disk; the operator sees
+   them pixelated (plates and faces unreadable); drivers never see camera images. Real lots need the
+   PIN for the camera image, events, frames and setup.
+5. Free hosting forgets runtime data on restart. The camera phone keeps a copy of its lot's setup
+   and restores it automatically (`/api/lots/import`, PIN-checked); bookings made before a restart
+   are lost (a pilot would use a managed database).
+
+Occupancy is deliberately cautious: a spot is "occupied" if any sign of a car touches it (box
+covers 30% of the spot, the car's centre or its ground point — the bottom of its box, which matters
+for cameras that see cars at an angle — lies in the spot). A hidden free spot costs a driver a few
+metres; a "free" spot that is taken sends them to the wrong place.
 
 ## Architecture
 
@@ -154,6 +178,7 @@ Price 5 000 so'm per started hour (demo value) · booked spot held from 30 min b
 | `data/demo/ultralytics_spots_reference.json` | Ultralytics CI asset `solution_ci_parking_areas.json` | AGPL-3.0. Hand-drawn spots, used only as a reference to evaluate auto-layout. |
 | `backend/weights/aerial_vehicles.pt` / `.onnx` | Ultralytics CI asset `solutions_ci_parking_model.pt` | AGPL-3.0. Class list matches VisDrone (pedestrian … motor); if trained on VisDrone, that dataset is for non-commercial research — **must be replaced by our own fine-tuned model before any commercial use**. |
 | `backend/weights/yolo11n.pt` / `.onnx` | Ultralytics YOLO11n (COCO), taken from our elimination-stage repo github.com/trallexxs/trafficcv | AGPL-3.0 |
+| Leaflet (map, BSD-2-Clause); map tiles © OpenStreetMap contributors (ODbL), attribution shown on the map | public library / data | |
 | onnxruntime, FastAPI, OpenCV, NumPy, React, Vite, react-router, qrcode (run time); Ultralytics (export only) | public libraries | MIT / MIT / Apache-2.0 / BSD / MIT / MIT / MIT / MIT; AGPL-3.0 |
 
 Reused from our elimination stage (declared): YOLO11n weights file only.

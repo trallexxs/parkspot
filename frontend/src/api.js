@@ -1,5 +1,5 @@
-async function call(method, url, body, isForm) {
-  const opts = { method, headers: {} };
+async function call(method, url, body, isForm, headers = {}) {
+  const opts = { method, headers: { ...headers } };
   if (body && isForm) opts.body = body;
   else if (body) {
     opts.headers["content-type"] = "application/json";
@@ -20,11 +20,17 @@ async function call(method, url, body, isForm) {
   return data;
 }
 
+const pinHeader = (pin) => (pin ? { "X-Lot-Pin": pin } : {});
+
 export const api = {
-  lots: () => call("GET", "/api/lots"),
+  lots: (scope = "map") => call("GET", `/api/lots?scope=${scope}`),
   lot: (id) => call("GET", `/api/lots/${id}`),
   state: (id) => call("GET", `/api/lots/${id}/state`),
-  events: (id) => call("GET", `/api/lots/${id}/events`),
+  events: (id, pin) => call("GET", `/api/lots/${id}/events`, null, false, pinHeader(pin)),
+  auth: (id, pin) => call("POST", `/api/lots/${id}/auth`, { pin }),
+  setup: (id, pin, body) => call("PUT", `/api/lots/${id}/setup`, body, false, pinHeader(pin)),
+  exportLot: (id, pin) => call("GET", `/api/lots/${id}/export`, null, false, pinHeader(pin)),
+  importLot: (cfg, pin) => call("POST", "/api/lots/import", cfg, false, pinHeader(pin)),
   directions: (id, spot) => call("GET", `/api/lots/${id}/directions/${spot}`),
   book: (id, body) => call("POST", `/api/lots/${id}/bookings`, body),
   booking: (bid) => call("GET", `/api/bookings/${bid}`),
@@ -48,14 +54,36 @@ export const api = {
     f.append("name", name);
     return call("POST", "/api/lots", f, true);
   },
-  pushFrame: (id, file, live = true) => {
+  pushFrame: (id, file, pin, live = true) => {
     const f = new FormData();
     f.append("image", file);
     f.append("live", live ? "true" : "false");
-    return call("POST", `/api/lots/${id}/frame`, f, true);
+    return call("POST", `/api/lots/${id}/frame`, f, true, pinHeader(pin));
   },
   metrics: () => call("GET", "/api/metrics"),
 };
 
 export const money = (n, cur = "UZS") =>
   `${Number(n || 0).toLocaleString("ru-RU").replace(/,/g, " ")} ${cur === "UZS" ? "so'm" : cur}`;
+
+// Driving directions outside the lot: hand over to the driver's own navigation app (no API key).
+export const navLinks = (loc) => ({
+  google: `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}&travelmode=driving`,
+  yandex: `https://yandex.uz/maps/?rtext=~${loc.lat},${loc.lng}&rtt=auto`,
+});
+
+export function distanceKm(a, b) {
+  if (!a || !b) return null;
+  const R = 6371, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+export function ago(iso) {
+  if (!iso) return "never";
+  const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
+  if (s < 60) return `${s} s ago`;
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  return `${Math.round(s / 3600)} h ago`;
+}

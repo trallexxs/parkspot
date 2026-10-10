@@ -59,6 +59,39 @@ def directions(lot, spot_id):
             "short": f"{spot_id}: straight {dist} m, then {side}"}
 
 
+def assign_aisle_rows(lot):
+    """Operator-drawn aisles: give each row of spots to the aisle it faces. A row belongs to the
+    nearest aisle whose line passes within ~3 spot widths of the row's spots and whose length
+    covers them; rows behind other rows (no aisle next to them) get none."""
+    spots = lot["spots"]
+    rows = {}
+    for s in spots:
+        rows.setdefault(s["row"], []).append(s)
+    for a in lot.get("aisles", []):
+        a["rows"] = []
+    best = {}
+    for r, members in rows.items():
+        cs = np.array([_centre(s) for s in members])
+        widths = [min(np.ptp(np.asarray(s["polygon"], float)[:, 0]), np.ptp(np.asarray(s["polygon"], float)[:, 1]))
+                  for s in members]
+        tol = 3.0 * float(np.median(widths))
+        for a in lot.get("aisles", []):
+            a0, a1 = np.asarray(a["start"], float), np.asarray(a["end"], float)
+            seg = a1 - a0
+            L = float(np.linalg.norm(seg)) + 1e-9
+            d = seg / L
+            rel = cs - a0
+            along = rel @ d
+            dist = np.abs(d[0] * rel[:, 1] - d[1] * rel[:, 0])
+            covered = np.mean((along >= -0.15 * L) & (along <= 1.15 * L))
+            md = float(np.median(dist))
+            if covered >= 0.6 and md <= tol and (r not in best or md < best[r][1]):
+                best[r] = (a, md)
+    for r, (a, _) in sorted(best.items()):
+        a["rows"].append(r)
+    return lot
+
+
 def aisle_map(lot):
     """App map: for each aisle, the spots on the driver's left and right, ordered from the entrance.
     Rows without an aisle are returned as plain rows."""

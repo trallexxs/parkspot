@@ -175,3 +175,27 @@ select { font: inherit; padding: 10px; border-radius: 12px; border: 1px solid va
 .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 .tbl th, .tbl td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--line); }
 .tbl th:first-child, .tbl td:first-child { text-align: left; }
+
+/* ---- driver map ---- */
+.map-box { width: 100%; border-radius: 14px; overflow: hidden; z-index: 0; }
+.map-card-home { padding: 8px; }
+.lot-pin { position: relative; width: 44px; height: 44px; border-radius: 50% 50% 50% 4px; transform: rotate(-45deg); display: grid; place-items: center; box-shadow: 0 3px 10px rgba(0, 0, 0, .3); border: 3px solid #fff; }
+.lot-pin b { transform: rotate(45deg); color: #fff; font: 800 16px/1 -apple-system, Segoe UI, Roboto, sans-serif; }
+.lot-pin span { display: none; }
+.lot-pin.free { background: #18a058; }
+.lot-pin.full { background: #d03050; }
+.lot-pin.offline { background: #8a97a8; }
+.lot-pin.pick { background: #1f5fe0; }
+.lot-card-map { cursor: pointer; }
+.lot-card-map.selected { outline: 3px solid var(--blue); }
+.lot-card-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.free-big.off { color: var(--muted); }
+.free-big.off b { font-size: 28px; }
+.spot.unknown { background: #eef1f5; border: 2px dashed #b9c4d0; color: #8a97a8; }
+.offline-banner { background: #fdecef; color: #8a1c33; border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+.pin-big { font: 800 44px/1.1 ui-monospace, Menlo, monospace; letter-spacing: 6px; color: var(--blue); text-align: center; }
+.steps { display: flex; gap: 6px; }
+.steps span { flex: 1; text-align: center; font-size: 12px; padding: 6px 4px; border-radius: 999px; background: var(--road); color: var(--muted); font-weight: 700; }
+.steps span.on { background: var(--blue); color: #fff; }
+.dot.unknown { background: #eef1f5; border: 2px dashed #b9c4d0; }
+.tap-hint { font-size: 14px; font-weight: 700; color: var(--blue); height: 22px; line-height: 22px; }

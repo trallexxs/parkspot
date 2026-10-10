@@ -14,7 +14,7 @@ from . import config, lots, store
 from .cv import pipeline
 from .guidance import aisle_map, directions
 
-app = FastAPI(title="Smart Parking API")
+app = FastAPI(title="ParkDet API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -40,9 +40,7 @@ def health():
 # ------------------------------------------------------------------ lots
 
 def require_operator(lot, pin):
-    """Real lots: the camera image, events, camera frames and setup need the lot's PIN."""
-    if lot.kind == "sample":
-        return
+    """The camera image, events, camera frames and setup need the lot's PIN."""
     if not lots.check_pin(lot.cfg, pin):
         raise HTTPException(403, "operator PIN required")
 
@@ -50,27 +48,18 @@ def require_operator(lot, pin):
 def lot_summary(lot):
     st = lots.state(lot)
     c = lot.cfg
-    sample = lot.kind == "sample"
     return {"id": lot.id, "name": c["name"], "address": c.get("address", ""), "kind": lot.kind,
-            "location": c.get("location"), "published": c.get("published", sample),
-            "confirmed": c.get("confirmed", sample),
+            "location": c.get("location"), "published": c.get("published", False),
+            "confirmed": c.get("confirmed", False),
             "price_per_hour": c.get("price_per_hour"), "currency": c.get("currency"),
             "counts": st["counts"], "total": st["total"],
             "camera_online": st["camera"]["online"], "updated_at": st["camera"]["updated_at"]}
 
 
 @app.get("/api/lots")
-def list_lots(scope: str = "map"):
-    """map: real lots an operator has checked, placed on the map and published.
-    sample: recorded demo lots (never shown to drivers as real places)."""
-    out = []
-    for lot in lots.LOTS.values():
-        if scope == "map" and not (lot.kind == "real" and lot.cfg.get("published")):
-            continue
-        if scope == "sample" and lot.kind != "sample":
-            continue
-        out.append(lot_summary(lot))
-    return out
+def list_lots():
+    """The drivers' map: lots an operator has checked, placed on the map and published."""
+    return [lot_summary(lot) for lot in lots.LOTS.values() if lot.cfg.get("published")]
 
 
 @app.get("/api/lots/{lot_id}")
@@ -148,8 +137,6 @@ def lot_setup(lot_id: str, body: SetupIn, x_lot_pin: str | None = Header(None)):
     """Operator's one-time check: corrected spots, aisles (entrance first), name, address, price,
     GPS location, publish to the drivers' map."""
     lot = get_lot(lot_id)
-    if lot.kind != "real":
-        raise HTTPException(400, "the sample lot cannot be edited")
     require_operator(lot, x_lot_pin)
     try:
         lots.apply_setup(lot, body.spots, body.aisles, body.info)
@@ -162,8 +149,6 @@ def lot_setup(lot_id: str, body: SetupIn, x_lot_pin: str | None = Header(None)):
 def lot_export(lot_id: str, x_lot_pin: str | None = Header(None)):
     """The lot's full config, kept by the operator's devices to restore it after a server restart."""
     lot = get_lot(lot_id)
-    if lot.kind != "real":
-        raise HTTPException(400, "only real lots are exported")
     require_operator(lot, x_lot_pin)
     return lot.cfg
 
@@ -186,17 +171,14 @@ async def push_frame(lot_id: str, image: UploadFile = File(...), live: bool = Fo
                      x_lot_pin: str | None = Header(None)):
     """The lot's camera (a phone at the lot) sends a new frame (live=true smooths over frames)."""
     lot = get_lot(lot_id)
-    if lot.cfg.get("camera", {}).get("type") == "video":
-        raise HTTPException(400, "this lot is fed by a recorded camera; create your own lot to stream frames")
     require_operator(lot, x_lot_pin)
     data = await image.read()
 
-    def work():  # CPU-bound: off the event loop, ahead of the replay camera
-        with lots.interactive():
-            try:
-                return lot.process(_read_image(data), smooth=live)
-            except ValueError as e:
-                raise HTTPException(409, str(e))
+    def work():  # CPU-bound: off the event loop
+        try:
+            return lot.process(_read_image(data), smooth=live)
+        except ValueError as e:
+            raise HTTPException(409, str(e))
     res = await run_in_threadpool(work)
     return {"timing": res["timing"], "summary": res["summary"]}
 
@@ -208,9 +190,8 @@ async def create_lot(image: UploadFile = File(...), name: str = Form("My lot")):
     data = await image.read()
 
     def work():
-        with lots.interactive():
-            img = pipeline.limit_size(_read_image(data))
-            return img, pipeline.analyze(img)
+        img = pipeline.limit_size(_read_image(data))
+        return img, pipeline.analyze(img)
     img, res = await run_in_threadpool(work)
     if len(res["spots"]) < 3:
         raise HTTPException(422, "Could not find parking rows in this view (need 3+ parked cars in a row).")
@@ -226,11 +207,10 @@ async def analyze(image: UploadFile = File(...), lot_id: str = Form("")):
     spots = get_lot(lot_id).spots if lot_id else None
 
     def work():
-        with lots.interactive():
-            res = pipeline.analyze(_read_image(data), spots=spots)
-            annotated = pipeline.draw(res.pop("_img"), res["spots"], res["detections"])
-            res["annotated"] = pipeline.to_b64(pipeline.limit_size(annotated, 1280))  # light for phones
-            return res
+        res = pipeline.analyze(_read_image(data), spots=spots)
+        annotated = pipeline.draw(res.pop("_img"), res["spots"], res["detections"])
+        res["annotated"] = pipeline.to_b64(pipeline.limit_size(annotated, 1280))  # light for phones
+        return res
     return await run_in_threadpool(work)
 
 

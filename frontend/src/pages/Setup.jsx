@@ -40,7 +40,6 @@ export default function Setup() {
   }, [id]);
 
   if (!lot) return <div className="page"><div className="card">{err || "Loading…"}</div></div>;
-  if (lot.kind !== "real") return <div className="page"><div className="card">The sample lot cannot be edited.</div></div>;
   if (!pin) return <div className="page"><PinGate lotId={id} lotName={lot.name} onOk={setPin} /></div>;
   const W = lot.camera.width, H = lot.camera.height;
 

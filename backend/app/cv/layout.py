@@ -182,32 +182,3 @@ def auto_layout(detections, min_conf=None, image_size=None):
                         "source": "observed" if s["observed"] else "inferred"})
     return {"spots": out, "rows": len(rows_out), "unassigned": len(dets) - best[2]}
 
-
-def stable_boxes(frames_dets, min_frac=0.5, iou_thr=0.6):
-    """Keep vehicles that stay in place across frames (parked), drop moving traffic."""
-    clusters = []  # each: list of boxes
-    for dets in frames_dets:
-        for d in dets:
-            b = d["box"]
-            best, best_iou = None, iou_thr
-            for c in clusters:
-                i = iou(b, c["rep"])
-                if i > best_iou:
-                    best, best_iou = c, i
-            if best is None:
-                clusters.append({"boxes": [b], "rep": b, "conf": [d["conf"]], "cls": d["cls"]})
-            else:
-                best["boxes"].append(b)
-                best["conf"].append(d["conf"])
-                best["rep"] = np.median(np.array(best["boxes"]), axis=0).tolist()
-    n = max(1, len(frames_dets))
-    return [{"box": c["rep"], "conf": float(np.median(c["conf"])), "cls": c["cls"]}
-            for c in clusters if len(c["boxes"]) >= min_frac * n]
-
-
-def iou(a, b):
-    ix = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
-    iy = max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
-    inter = ix * iy
-    union = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
-    return inter / union if union > 0 else 0.0

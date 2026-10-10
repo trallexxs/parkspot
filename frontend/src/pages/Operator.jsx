@@ -32,7 +32,7 @@ export default function Operator() {
   const [pin, setPin] = useState(operatorStore.pin(id));
   const [msg, setMsg] = useState("");
   const [state] = usePoll(() => api.state(id), 3000, [id]);
-  const [events] = usePoll(() => (lot && (lot.kind === "sample" || pin) ? api.events(id, pin) : Promise.resolve(null)), 4000, [id, pin, lot?.kind]);
+  const [events] = usePoll(() => (lot && pin ? api.events(id, pin) : Promise.resolve(null)), 4000, [id, pin, !!lot]);
   const [t, setT] = useState(0);
 
   const load = () => api.lot(id).then((l) => { setLot(l); setMissing(false); }).catch((e) => { if (e.status === 404) setMissing(true); });

@@ -6,13 +6,12 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = BACKEND_DIR.parent
 WEIGHTS_DIR = BACKEND_DIR / "weights"
 LOTS_DIR = BACKEND_DIR / "lots"
-DATA_DIR = ROOT_DIR / "data"
 FRONTEND_DIST = ROOT_DIR / "frontend" / "dist"
 DB_PATH = Path(os.environ.get("PARK_DB", BACKEND_DIR / "parking.sqlite3"))
 METRICS_PATH = ROOT_DIR / "eval" / "results" / "metrics.json"
 
 # Detector ensemble
-AERIAL_WEIGHTS = WEIGHTS_DIR / "aerial_vehicles.onnx"   # top-down / drone views (VisDrone classes)
+AERIAL_WEIGHTS = WEIGHTS_DIR / "aerial_vehicles.onnx"   # top-down views (camera looking down on the lot)
 GROUND_WEIGHTS = WEIGHTS_DIR / "yolo11n.onnx"           # pole / wall cameras (COCO classes)
 ORT_THREADS = int(os.environ.get("ORT_THREADS", "2"))
 DET_IMGSZ = 640
@@ -42,10 +41,6 @@ ROW_MIN_CARS = 3
 LAYOUT_MIN_CONF = 0.35
 ROW_ALIGN_TOL = 0.4           # a car is on a row line if its centre is within 0.4 x its depth
 LAYOUT_INFERRED_PENALTY = 0.5 # score of a reading = cars explained - 0.5 x spots invented
-
-# Live camera worker
-CAMERA_INTERVAL_S = float(os.environ.get("CAMERA_INTERVAL_S", "1.5"))
-CAMERA_IDLE_AFTER_S = 60      # replay camera pauses when no one has looked at the lot for this long
 
 # Real lots (phone camera)
 CAMERA_OFFLINE_S = 120        # no frame for this long => the lot is shown as "camera offline"

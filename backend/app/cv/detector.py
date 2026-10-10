@@ -1,6 +1,6 @@
 """Vehicle detection: an ensemble of two YOLO11 models.
 
-* aerial model  - trained on drone imagery (VisDrone classes); strong on top-down views.
+* aerial model  - for top-down views (a camera looking down on the lot); source and licence in the README.
 * ground model  - COCO YOLO11n; strong on pole/wall cameras that see cars from the side.
 
 Both run on every image (or tile) and their boxes are merged with class-agnostic NMS,
@@ -8,7 +8,6 @@ so the same code works whatever the camera angle is.
 """
 import threading
 import time
-from contextlib import contextmanager
 
 import cv2
 import numpy as np
@@ -77,7 +76,6 @@ class Detector:
         for name, model, cmap in self.models:
             if out and name == "ground" and _decisive(out):
                 break  # the aerial model already explains a top-down view: skip the ground model
-            _wait_if_background()
             with self.lock:
                 xyxy, conf, cls = model.predict(img, config.DET_CONF, cmap)
             for b, c, k in zip(xyxy, conf, cls):
@@ -133,40 +131,6 @@ def _decisive(dets):
         return False
     conf = sorted(d["conf"] for d in dets)
     return len(conf) >= config.CASCADE_MIN_CARS and conf[len(conf) // 2] >= config.CASCADE_MIN_CONF
-
-
-# Priority: a person waiting (photo analysis, phone camera, new lot) goes before background work
-# (the replay camera). The model lock is taken per model run, and background threads wait before
-# each run while anyone is waiting, so a person waits for at most one in-flight model run.
-_waiting = 0
-_waiting_lock = threading.Lock()
-_tls = threading.local()
-
-
-@contextmanager
-def interactive():
-    global _waiting
-    with _waiting_lock:
-        _waiting += 1
-    try:
-        yield
-    finally:
-        with _waiting_lock:
-            _waiting -= 1
-
-
-@contextmanager
-def background():
-    _tls.background = True
-    try:
-        yield
-    finally:
-        _tls.background = False
-
-
-def _wait_if_background():
-    while getattr(_tls, "background", False) and _waiting > 0:
-        time.sleep(0.05)
 
 
 def nms(dets, iou_thr):

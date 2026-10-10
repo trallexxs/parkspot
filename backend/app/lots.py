@@ -1,11 +1,10 @@
-"""Lot registry, live camera workers and the merge of camera occupancy with bookings."""
+"""Lot registry, camera frames from each lot's phone, and the merge of camera occupancy with bookings."""
 import hashlib
 import json
 import math
 import secrets
 import string
 import threading
-import time
 from datetime import timedelta
 
 import cv2
@@ -13,7 +12,6 @@ import numpy as np
 
 from . import config, store
 from .cv import pipeline
-from .cv import detector as detector_priority
 from .cv.detector import get_detector
 from .cv.occupancy import SpotSmoother, spot_scores
 from .guidance import assign_aisle_rows, directions
@@ -33,7 +31,6 @@ class Lot:
         self.quality = {}
         self.updated_at = None
         self.frames_processed = 0
-        self.last_viewed = time.time()  # the replay camera only runs while someone is looking
 
     @property
     def spots(self):
@@ -85,62 +82,19 @@ class Lot:
         return res
 
 
-class CameraWorker(threading.Thread):
-    """Replays a recorded video through the full pipeline, as if it were a live camera."""
-
-    def __init__(self, lot):
-        super().__init__(daemon=True)
-        self.lot = lot
-
-    def run(self):
-        path = config.ROOT_DIR / self.lot.cfg["camera"]["path"]
-        stride = self.lot.cfg["camera"].get("stride", 2)
-        while True:
-            cap = cv2.VideoCapture(str(path))
-            i = 0
-            while True:
-                ok, f = cap.read()
-                if not ok:
-                    break
-                if i % stride == 0:
-                    while (self.lot.frame is not None
-                           and time.time() - self.lot.last_viewed > config.CAMERA_IDLE_AFTER_S):
-                        time.sleep(1.0)  # nobody is watching: save CPU on small servers
-                    t0 = time.time()
-                    try:
-                        with detector_priority.background():  # yields to people between model runs
-                            self.lot.process(f)
-                    except Exception as e:  # keep the camera alive
-                        print("camera error", self.lot.id, e)
-                    took = time.time() - t0
-                    time.sleep(max(config.CAMERA_INTERVAL_S, 2 * took))  # never use more than ~1/3 of a CPU
-                i += 1
-            cap.release()
-
-
 LOTS: dict[str, Lot] = {}
-
-interactive = detector_priority.interactive  # kept as lots.interactive for main.py
 
 
 def load_all():
     get_detector()
-    for p in sorted(config.LOTS_DIR.glob("*.json")) + sorted((config.LOTS_DIR / "user").glob("*.json")):
-        cfg = json.loads(p.read_text())
-        lot = Lot(cfg, p)
+    for p in sorted((config.LOTS_DIR / "user").glob("*.json")):
+        lot = Lot(json.loads(p.read_text()), p)
         LOTS[lot.id] = lot
-        cam = cfg.get("camera", {})
-        if cam.get("type") == "video":
-            CameraWorker(lot).start()
-        elif cam.get("type") == "image" and cam.get("path"):
-            img = cv2.imread(str(config.ROOT_DIR / cam["path"]))
-            if img is not None:
-                lot.process(img, smooth=False)
-        # "push" lots (a phone camera) wait for their camera: frames are never written to disk
+        # each lot waits for its camera phone to send frames: frames are never written to disk
 
 
 def lot_kind(cfg):
-    return cfg.get("kind") or ("real" if cfg.get("user_created") else "sample")
+    return cfg.get("kind") or "real"
 
 
 def hash_pin(pin, salt=None):
@@ -161,8 +115,6 @@ def new_pin():
 
 
 def camera_online(lot):
-    if lot.cfg.get("camera", {}).get("type") == "video":
-        return True
     if not lot.updated_at:
         return False
     return (store.now() - store.parse(lot.updated_at)).total_seconds() < config.CAMERA_OFFLINE_S
@@ -332,7 +284,6 @@ def nearest_free(lot, statuses, prefer_row=None, exclude=()):
 def state(lot):
     """Final status per spot: free / occupied / reserved / conflict. Also enforces bookings."""
     now = store.now()
-    lot.last_viewed = time.time()
     with lot.lock:
         cv = dict(lot.cv)
     held = _held_bookings(lot.id, now)
@@ -391,21 +342,21 @@ def pixelate(img, width):
 
 
 def annotated_jpeg(lot, statuses):
-    """Spot overlay on the camera image. Real lots: the image is pixelated first (privacy)."""
+    """Spot overlay on the camera image, pixelated first (privacy)."""
     with lot.lock:
         if lot.frame is None:
             return None
-        frame = lot.frame if lot.kind == "sample" else pixelate(lot.frame, config.PIXELATE_VIEW_W)
+        frame = pixelate(lot.frame, config.PIXELATE_VIEW_W)
         img = pipeline.draw(frame, lot.spots, lot.dets, status=statuses)
     return pipeline.to_jpeg(img)
 
 
 def raw_jpeg(lot):
-    """Camera image without overlay for the operator's spot editor (pixelated for real lots)."""
+    """Camera image without overlay for the operator's spot editor (pixelated)."""
     with lot.lock:
         if lot.frame is None:
             return None
-        frame = lot.frame if lot.kind == "sample" else pixelate(lot.frame, config.PIXELATE_EDIT_W)
+        frame = pixelate(lot.frame, config.PIXELATE_EDIT_W)
     return pipeline.to_jpeg(frame)
 
 

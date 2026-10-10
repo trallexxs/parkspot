@@ -33,10 +33,6 @@ export default function Vision() {
           {busy ? "Analysing…" : "Take / upload a photo"}
           <input type="file" accept="image/*" capture="environment" onChange={(e) => e.target.files[0] && run(e.target.files[0])} />
         </label>
-        <button className="btn ghost wide" disabled={busy} onClick={async () => {
-          const blob = await (await fetch("/api/lots/demo/frame.jpg")).blob();
-          run(new File([blob], "demo.jpg", { type: "image/jpeg" }));
-        }}>Try with the demo camera frame</button>
         {err && <div className="error small">{err}</div>}
       </div>
 
@@ -70,7 +66,6 @@ export default function Vision() {
           <Link className="btn ghost" to="/quality">Measured quality{metrics?.available ? ` (${metrics.summary.images} photos)` : ""}</Link>
           <Link className="btn ghost" to="/label">Build the test set</Link>
           <Link className="btn ghost" to="/operator">Parking operators</Link>
-          <Link className="btn ghost" to="/lot/demo">Sample lot (recorded)</Link>
         </div>
       </div>
     </div>

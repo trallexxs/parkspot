@@ -1,4 +1,4 @@
-"""Evaluate ParkSpot on our own labelled test set.
+"""Evaluate ParkDet on our own labelled test set.
 
     cd backend && python ../eval/evaluate.py            # all bundles in eval/testset/
     python ../eval/evaluate.py --robustness             # + synthetic night / rain / fog / blur

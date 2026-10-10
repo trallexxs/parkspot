@@ -9,7 +9,7 @@ import NavButtons from "../components/NavButtons.jsx";
 /** Drivers' home: real lots on a map, live free counts from each lot's camera, nearest first. */
 export default function Home() {
   const nav = useNavigate();
-  const [lots, error] = usePoll(() => api.lots("map"), 5000);
+  const [lots, error] = usePoll(() => api.lots(), 5000);
   const [me, locError] = useLocation(true);
   const [selected, setSelected] = useState(null);
 
@@ -21,7 +21,7 @@ export default function Home() {
   return (
     <div className="page">
       <header className="page-head">
-        <div className="brand"><span className="brand-p">P</span> ParkSpot</div>
+        <div className="brand"><span className="brand-p">P</span> ParkDet</div>
         <p className="muted small">Free spots counted by each lot's own camera, live. Nothing on this map is simulated.</p>
       </header>
       <div className="card map-card-home">
@@ -62,7 +62,7 @@ export default function Home() {
         </div>
       ))}
       <div className="muted small center">
-        <Link to="/lot/demo">Sample lot (recorded footage)</Link> · <Link to="/operator">For parking operators</Link>
+        <Link to="/operator">For parking operators</Link>
       </div>
     </div>
   );

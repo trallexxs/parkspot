@@ -59,17 +59,15 @@ export default function Lot() {
   if (!lot) return <div className="page"><div className="card">{err || "Loading…"}</div></div>;
   const c = state?.counts;
   const online = state ? state.camera.online : lot.camera_online;
-  const sample = lot.kind === "sample";
-  const canSeeCamera = sample || !!opPin;
+  const canSeeCamera = !!opPin;
   const km = distanceKm(me, lot.location);
   return (
     <div className="page">
       <header className="page-head">
         <h1>{lot.name}</h1>
         <div className="muted small">{lot.address}</div>
-        {sample && <div className="notice small">Sample lot: a replay of recorded public footage, processed live by our pipeline. Not a real place you can drive to.</div>}
-        {!sample && km != null && <div className="small">{km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`} from you (straight line)</div>}
-        {!sample && <NavButtons location={lot.location} />}
+        {km != null && <div className="small">{km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`} from you (straight line)</div>}
+        <NavButtons location={lot.location} />
         {!online && (
           <div className="offline-banner">
             The camera at this lot is offline (last frame {ago(state?.camera?.updated_at || lot.updated_at)}). Spot data cannot be confirmed, so booking is paused.
@@ -85,12 +83,12 @@ export default function Lot() {
           {canSeeCamera && <button className="btn ghost" onClick={() => setShowCam((v) => !v)}>{showCam ? "Hide camera" : "Show camera view"}</button>}
           <a className="btn ghost" href={`/enter/${id}`}>Walk-in (QR) flow</a>
           <a className="btn ghost" href={`/display/${id}`} target="_blank" rel="noreferrer">Entrance screen</a>
-          {(sample || opPin) && <a className="btn ghost" href={`/operator/${id}`}>Operator view</a>}
+          {opPin && <a className="btn ghost" href={`/operator/${id}`}>Operator view</a>}
         </div>
         {showCam && canSeeCamera && (
           <figure className="camera">
             <img src={`/api/lots/${id}/frame.jpg?t=${tick}${opPin ? `&pin=${encodeURIComponent(opPin)}` : ""}`} alt="camera view with detected spots" />
-            <figcaption className="muted small">{sample ? state?.camera?.label : "Operator view · image pixelated for privacy (plates and faces unreadable)"}</figcaption>
+            <figcaption className="muted small">Operator view · image pixelated for privacy (plates and faces unreadable)</figcaption>
           </figure>
         )}
       </header>

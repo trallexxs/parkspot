@@ -81,7 +81,7 @@ export default function Label() {
     const blob = new Blob([JSON.stringify(bundle)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `parkspot-testset-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.json`;
+    a.download = `parkdet-testset-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.json`;
     a.click();
   }
 

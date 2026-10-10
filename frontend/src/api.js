@@ -23,7 +23,7 @@ async function call(method, url, body, isForm, headers = {}) {
 const pinHeader = (pin) => (pin ? { "X-Lot-Pin": pin } : {});
 
 export const api = {
-  lots: (scope = "map") => call("GET", `/api/lots?scope=${scope}`),
+  lots: () => call("GET", "/api/lots"),
   lot: (id) => call("GET", `/api/lots/${id}`),
   state: (id) => call("GET", `/api/lots/${id}/state`),
   events: (id, pin) => call("GET", `/api/lots/${id}/events`, null, false, pinHeader(pin)),

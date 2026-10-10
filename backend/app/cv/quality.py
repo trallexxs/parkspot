@@ -40,9 +40,8 @@ def assess(img):
 
 def enhance(img, quality):
     """Dark / low-contrast frames: percentile contrast stretch (1st..99.5th) -> second view for the
-    detector. Measured on synthetic night: CLAHE+gamma lost vehicles (37 -> 30 of 41), a plain
-    stretch keeps them, and detecting on raw + stretched and merging finds 39 of 41.
-    Returns (image, enhanced?)."""
+    detector; the pipeline merges the detections of the raw and the stretched view (in our tests a
+    CLAHE + gamma enhancement lost vehicles, a plain stretch did not). Returns (image, enhanced?)."""
     if quality["lighting"] == "day" and quality["contrast"] >= 25:
         return img, False
     lo, hi = np.percentile(img, 1), np.percentile(img, 99.5)

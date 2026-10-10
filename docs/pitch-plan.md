@@ -27,7 +27,6 @@ Q&A owners: CV/model → Amirxon · app/demo/deploy → Bobur · business/pilot 
 ## Placeholders to fill before the defence (never with guesses)
 
 - Slide 2: interviews / conversations / observed time-to-park — only what you actually collected.
-- Slides 4, 12: live site URL + QR code (send the Render URL; I generate the QR).
 - Slide 7, 9, A: Tashkent test-set size and results (from `/label` → `eval/evaluate.py`).
 - Slides 9–11: server price per month, subscription price, booking fee, salaries, labelling cost,
   phone price, payback months — from real quotes, or say aloud "hypothesis for the pilot".
@@ -49,8 +48,11 @@ Q&A owners: CV/model → Amirxon · app/demo/deploy → Bobur · business/pilot 
 4. Operator view → event log ("booking moved", "camera confirmed parked").
 5. Close with "one CPU server, no GPU".
 
+Live site: https://parkspot-5bo4.onrender.com (QR on slides 4 and 12). `/api/health` shows the running commit.
+
 Before: open the site 10 minutes early (free server sleeps), tabs ready, one phone as backup,
-2 lot photos on the laptop, **recorded backup video** offline. On failure: switch to the video at
+2 lot photos on the laptop, **recorded backup video** offline: `docs/demo-backup.mp4` (63 s).
+On the free server a photo takes ~1–3 s: say "free tenth-of-a-CPU server" while it runs. On failure: switch to the video at
 the same step; never debug on stage.
 
 ## Likely questions (answers are in the slide notes)

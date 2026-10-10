@@ -68,7 +68,7 @@ Run time: **onnxruntime on CPU, no PyTorch**. Two machines:
 | machine | 640×360 frame | 1920×1080 photo | notes |
 |---|---|---|---|
 | 4-core Intel Xeon 2.1 GHz, 2 threads | 77 ms mean, 99 ms p95 (20 runs) | 86 ms (5 runs) | detector 61 ms, layout + occupancy 14 ms |
-| Render free web service (0.1 vCPU) | see the smoke-test log | see the smoke-test log | GitHub Actions `smoke` run against the live site |
+| Render free web service (0.1 vCPU), the live demo | 1.8 s (2.1 s end to end) | 1.9 s (3.1 s end to end, 4000×2250 upload) | GitHub Actions `smoke` run on commit b5cba7d; camera frame 1.0 s |
 
 On top-down views the cascade skips the ground-view model (identical results on the dev set).
 Large photos are tiled only when the cars in them are tiny (far view: ~2 s on the 4-core machine).
@@ -129,6 +129,12 @@ describes the service and every push to `main` redeploys it (history in the Rend
 Free-tier notes: the service sleeps after 15 min without traffic (first request takes ~1 min),
 the CPU is small (expect a few seconds per photo), and the SQLite file is reset on every restart —
 fine for a demo, a pilot would use managed Postgres.
+
+## Backup demo
+
+`docs/demo-backup.mp4` (63 s, captioned phone-screen recording of the same code): booking, the
+camera seeing another car take the booked spot and the booking moving itself, photo analysis,
+entrance screen, operator view, walk-in with pay-before-exit. Defence plan: `docs/pitch-plan.md`.
 
 ## Payments
 

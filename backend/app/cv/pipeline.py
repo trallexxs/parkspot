@@ -44,7 +44,11 @@ def analyze(img, spots=None):
     if enhanced:  # dark frame: also detect on the stretched copy and merge (night recall)
         more, info2 = get_detector().detect(work)
         dets = nms(dets + more, config.NMS_IOU)
-        dinfo = {**dinfo, "ms": round(dinfo["ms"] + info2["ms"], 1), "views": 2}
+        dinfo = {**dinfo, "ms": round(dinfo["ms"] + info2["ms"], 1), "views": 2,
+                 "tiles_skipped": dinfo["tiles_skipped"] or info2["tiles_skipped"]}
+    if dinfo["tiles_skipped"]:
+        qual = {**qual, "warnings": qual["warnings"] + [
+            "Distant cars may be missed: the detailed search in tiles was skipped to answer quickly on this small server."]}
     t["detect_ms"] = dinfo["ms"]
 
     t1 = time.perf_counter()

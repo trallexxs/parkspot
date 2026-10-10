@@ -23,6 +23,8 @@ CASCADE_MIN_CONF = 0.6      # ...with at least this median confidence
 TILE_ABOVE_PX = 1400        # images larger than this MAY also be processed in overlapping tiles...
 TILE_SMALL_PX = 18          # ...when boxes are this small at network scale (short side, px)
 TILE_SMALL_FRAC = 0.3       # ...for at least this share of the boxes (or nothing was found)
+TILE_BUDGET_S = float(os.environ.get("TILE_BUDGET_S", "8"))  # skip the tiles if they would take longer
+                            # than this (a small free server); the result then says so. 0 = always tile
 
 # Image quality
 NIGHT_BRIGHTNESS = 70       # mean V (0..255) below this => night

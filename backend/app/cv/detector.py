@@ -115,13 +115,19 @@ class Detector:
         t0 = time.perf_counter()
         h, w = img.shape[:2]
         dets = self._run(img)
-        tiled = self._needs_tiles(dets, h, w)
-        if tiled:
+        pass_s = time.perf_counter() - t0
+        tiled = skipped = False
+        if self._needs_tiles(dets, h, w):
             size = int(min(h, w, max(h, w) / 2))
-            for x, y in self._tiles(h, w, size):
-                dets += self._run(img[y:y + size, x:x + size], (x, y))
+            tiles = self._tiles(h, w, size)
+            if config.TILE_BUDGET_S and pass_s * len(tiles) > config.TILE_BUDGET_S:
+                skipped = True  # each tile costs about one full pass: too slow on this server
+            else:
+                tiled = True
+                for x, y in tiles:
+                    dets += self._run(img[y:y + size, x:x + size], (x, y))
         merged = nms(dets, config.NMS_IOU)
-        return merged, {"tiled": tiled, "raw": len(dets),
+        return merged, {"tiled": tiled, "tiles_skipped": skipped, "raw": len(dets),
                         "ms": round((time.perf_counter() - t0) * 1000, 1)}
 
 

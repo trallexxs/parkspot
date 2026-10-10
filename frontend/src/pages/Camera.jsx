@@ -31,15 +31,17 @@ export default function Camera() {
   const [pin, setPin] = useState(id ? operatorStore.pin(id) : "");
   const [newPin, setNewPin] = useState("");
   const [every, setEvery] = useState(5);
+  const gated = !!id && !pin; // PIN form shown instead of the video until the PIN is entered
 
   useEffect(() => {
+    if (gated) return undefined; // start the camera once the <video> is on the page
     let stream;
     navigator.mediaDevices?.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } }, audio: false })
       .then((s) => { stream = s; video.current.srcObject = s; return video.current.play(); })
       .then(() => setReady(true))
       .catch((e) => setErr("Camera not available: " + e.message + " (the site must be opened over https)"));
     return () => stream && stream.getTracks().forEach((t) => t.stop());
-  }, []);
+  }, [gated]);
 
   useEffect(() => { // keep this phone's copy of the lot fresh
     if (!id || !pin) return undefined;
@@ -86,7 +88,7 @@ export default function Camera() {
     setBusy(false);
   }
 
-  if (id && !pin) return <div className="page"><PinGate lotId={id} onOk={setPin} /></div>;
+  if (gated) return <div className="page"><PinGate lotId={id} onOk={setPin} /></div>;
   return (
     <div className="page">
       <header className="page-head">

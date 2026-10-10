@@ -98,10 +98,12 @@ cascade never skips the second detector (worst case); speed hardly depends on wh
 | machine | 1280×720 camera frame | notes |
 |---|---|---|
 | 4-core Intel Xeon 2.1 GHz, 2 threads | 141 ms mean, 159 ms p95 (20 runs) | 640×360: 139 ms; both detectors every frame |
-| Render free web service (0.1 vCPU), the live site | see the latest `smoke` run | GitHub Actions → smoke prints server and wall time |
+| Render free web service (0.1 vCPU), the live site | ~2.7 s (640×360 frame; `smoke` run on commit 89c3633) | a photo: ~3 s; so the camera phone sends one picture every 5–10 s there |
 
 The camera page sends at most 1280 px, so camera frames are never tiled. A large photo
-(4000×2250) in which the first pass finds no car is searched in tiles: ~2.5 s on the 4-core machine.
+(4000×2250) in which the first pass finds no car is searched in tiles: ~2.5 s on the 4-core machine,
+but 43 s on the free server. So when the tiles would take longer than 8 s (`TILE_BUDGET_S`), the
+tiled search is skipped and the result warns that distant cars may be missed.
 When the top-down model alone already finds 8+ confident vehicles, the street-level model is
 skipped (`CASCADE=0` turns this off). Server memory: under 300 MB peak in the smoke test with a
 4000×2250 upload, under 400 MB in all our tests. The ONNX models give the same vehicles as the
@@ -123,7 +125,8 @@ removed from the project; numbers will come from our own Tashkent photos.
 ## Known failure cases (current prototype)
 
 - Views where cars do not form clear rows (very oblique cameras, chaotic informal parking).
-- Very distant cars (about 10 px wide in the analysed image) are partly missed even with tiling.
+- Very distant cars (about 10 px wide in the analysed image) are partly missed even with tiling;
+  on the free demo server the tiled search is skipped (time budget) and the result says so.
 - Rows with fewer than 3 visible cars are not discovered automatically — the operator draws them
   once in the spot check.
 - Empty spots at the very ends of a row are not inferred (no neighbour to measure the gap).

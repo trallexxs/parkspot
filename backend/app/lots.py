@@ -28,6 +28,7 @@ class Lot:
         self.quality = {}
         self.updated_at = None
         self.frames_processed = 0
+        self.last_viewed = time.time()  # the replay camera only runs while someone is looking
 
     @property
     def spots(self):
@@ -69,11 +70,16 @@ class CameraWorker(threading.Thread):
                 if not ok:
                     break
                 if i % stride == 0:
+                    while (self.lot.frame is not None
+                           and time.time() - self.lot.last_viewed > config.CAMERA_IDLE_AFTER_S):
+                        time.sleep(1.0)  # nobody is watching: save CPU on small servers
+                    t0 = time.time()
                     try:
                         self.lot.process(f)
                     except Exception as e:  # keep the camera alive
                         print("camera error", self.lot.id, e)
-                    time.sleep(config.CAMERA_INTERVAL_S)
+                    took = time.time() - t0
+                    time.sleep(max(config.CAMERA_INTERVAL_S, 2 * took))  # never use more than ~1/3 of a CPU
                 i += 1
             cap.release()
 
@@ -173,6 +179,7 @@ def nearest_free(lot, statuses, prefer_row=None, exclude=()):
 def state(lot):
     """Final status per spot: free / occupied / reserved / conflict. Also enforces bookings."""
     now = store.now()
+    lot.last_viewed = time.time()
     with lot.lock:
         cv = dict(lot.cv)
     held = _held_bookings(lot.id, now)

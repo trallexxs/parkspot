@@ -12,8 +12,9 @@ DB_PATH = Path(os.environ.get("PARK_DB", BACKEND_DIR / "parking.sqlite3"))
 METRICS_PATH = ROOT_DIR / "eval" / "results" / "metrics.json"
 
 # Detector ensemble
-AERIAL_WEIGHTS = WEIGHTS_DIR / "aerial_vehicles.pt"   # top-down / drone views (VisDrone classes)
-GROUND_WEIGHTS = WEIGHTS_DIR / "yolo11n.pt"           # pole / wall cameras (COCO classes)
+AERIAL_WEIGHTS = WEIGHTS_DIR / "aerial_vehicles.onnx"   # top-down / drone views (VisDrone classes)
+GROUND_WEIGHTS = WEIGHTS_DIR / "yolo11n.onnx"           # pole / wall cameras (COCO classes)
+ORT_THREADS = int(os.environ.get("ORT_THREADS", "2"))
 DET_IMGSZ = 640
 DET_CONF = 0.25
 NMS_IOU = 0.5
@@ -35,7 +36,8 @@ ROW_MIN_CARS = 3
 LAYOUT_MIN_CONF = 0.35
 
 # Live camera worker
-CAMERA_INTERVAL_S = 1.5
+CAMERA_INTERVAL_S = float(os.environ.get("CAMERA_INTERVAL_S", "1.5"))
+CAMERA_IDLE_AFTER_S = 60      # replay camera pauses when no one has looked at the lot for this long
 
 # Business rules (assumptions, stated in the README)
 BOOKING_GRACE_MIN = 15      # booked spot is held this long after the arrival time

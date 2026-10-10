@@ -1,0 +1,8 @@
+**/node_modules
+frontend/dist
+**/__pycache__
+**/*.pt
+**/*.sqlite3
+backend/lots/user
+data/user_lots
+.git

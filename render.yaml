@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: parkspot
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: ORT_THREADS
+        value: "1"
+      - key: CAMERA_INTERVAL_S
+        value: "3"

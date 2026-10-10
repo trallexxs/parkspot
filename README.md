@@ -1,9 +1,3 @@
----
-title: ParkSpot
-sdk: docker
-app_port: 7860
----
-
 # ParkSpot — camera-based smart parking (working name)
 
 Track: Computer Vision · Mode: **Startup** *(to be confirmed by the team)*
@@ -60,20 +54,23 @@ camera frame ─► quality gate ─► (enhance) ─► YOLO aerial ┐
 ```
 
 Inference runs **on a server CPU** (no GPU needed); cameras (an IP camera, or simply a phone on a
-tripod via `/camera`) only send JPEG frames. Server memory with both models loaded: ~680 MB. One server handles many cameras because a
+tripod via `/camera`) only send JPEG frames. One server handles many cameras because a
 parking spot changes state on a scale of minutes: one frame every few seconds per camera is enough.
 
 ## Measured speed (prototype hardware)
 
-4-core Intel Xeon @ 2.1 GHz, CPU only, PyTorch, 20 runs on a 640×360 frame:
+Run time: **onnxruntime on CPU, no PyTorch** (2 threads), 4-core Intel Xeon @ 2.1 GHz,
+20 runs on a 640×360 frame:
 
 | stage | mean | p95 |
 |---|---|---|
-| detection (2 models) | 78 ms | 88 ms |
-| layout + occupancy | 21 ms | 24 ms |
-| total | 102 ms | 115 ms |
+| detection (2 models) | 142 ms | 165 ms |
+| layout + occupancy | 23 ms | 30 ms |
+| total | 168 ms | 199 ms |
 
-1920×1080 frame with tiling: 812 ms mean (5 runs).
+1920×1080 frame with tiling: 1 067 ms mean (5 runs). Server memory: ~325 MB steady, 382 MB peak
+(4K upload). The ONNX models give the same 41 vehicles on the reference frame as the PyTorch
+weights (`scripts/export_onnx.py` does the conversion).
 
 ## Quality
 
@@ -105,15 +102,18 @@ npm install
 npm run dev          # http://localhost:5173 (proxies /api to :8000)
 ```
 
-Or as one container: `docker build -t parkspot . && docker run -p 7860:7860 parkspot`.
+Or as one container: `docker build -t parkspot . && docker run -p 10000:10000 parkspot`.
 
 Onboard a new camera from footage:
 `cd backend && python -m scripts.onboard_lot --source path/to/video.mp4 --id mylot --name "My lot"`
 
 ## Deployment
 
-Every push to `main` is deployed to a Hugging Face Docker Space by
-`.github/workflows/deploy.yml` (deployment history recorded in GitHub Actions).
+Hosted on **Render** (free web service, Docker) straight from this repository: `render.yaml`
+describes the service and every push to `main` redeploys it (history in the Render dashboard).
+Free-tier notes: the service sleeps after 15 min without traffic (first request takes ~1 min),
+the CPU is small (expect a few seconds per photo), and the SQLite file is reset on every restart —
+fine for a demo, a pilot would use managed Postgres.
 
 ## Payments
 
@@ -131,8 +131,8 @@ Price 5 000 so'm per started hour (demo value) · booked spot held from 30 min b
 |---|---|---|
 | `data/demo/parking_demo.mp4` | Ultralytics CI asset `solution_ci_parking_demo.mp4` (github.com/ultralytics/assets) | AGPL-3.0 (Ultralytics). Used only as a stand-in camera feed. |
 | `data/demo/ultralytics_spots_reference.json` | Ultralytics CI asset `solution_ci_parking_areas.json` | AGPL-3.0. Hand-drawn spots, used only as a reference to evaluate auto-layout. |
-| `backend/weights/aerial_vehicles.pt` | Ultralytics CI asset `solutions_ci_parking_model.pt` | AGPL-3.0. Class list matches VisDrone (pedestrian … motor); if trained on VisDrone, that dataset is for non-commercial research — **must be replaced by our own fine-tuned model before any commercial use**. |
-| `backend/weights/yolo11n.pt` | Ultralytics YOLO11n (COCO), taken from our elimination-stage repo github.com/trallexxs/trafficcv | AGPL-3.0 |
-| Ultralytics, FastAPI, OpenCV, React, Vite, react-router, qrcode | public libraries | AGPL-3.0 / MIT / Apache-2.0 / MIT / MIT / MIT / MIT |
+| `backend/weights/aerial_vehicles.pt` / `.onnx` | Ultralytics CI asset `solutions_ci_parking_model.pt` | AGPL-3.0. Class list matches VisDrone (pedestrian … motor); if trained on VisDrone, that dataset is for non-commercial research — **must be replaced by our own fine-tuned model before any commercial use**. |
+| `backend/weights/yolo11n.pt` / `.onnx` | Ultralytics YOLO11n (COCO), taken from our elimination-stage repo github.com/trallexxs/trafficcv | AGPL-3.0 |
+| onnxruntime, FastAPI, OpenCV, NumPy, React, Vite, react-router, qrcode (run time); Ultralytics (export only) | public libraries | MIT / MIT / Apache-2.0 / BSD / MIT / MIT / MIT / MIT; AGPL-3.0 |
 
 Reused from our elimination stage (declared): YOLO11n weights file only.

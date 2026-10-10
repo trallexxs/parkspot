@@ -11,7 +11,7 @@ import time
 
 import cv2
 import numpy as np
-from ultralytics import YOLO
+import onnxruntime as ort
 
 from .. import config
 
@@ -19,13 +19,52 @@ AERIAL_MAP = {3: "car", 4: "van", 5: "truck", 8: "bus", 9: "motorcycle"}
 GROUND_MAP = {2: "car", 3: "motorcycle", 5: "bus", 7: "truck"}
 
 
+class OnnxYolo:
+    """YOLO11 exported to ONNX (output 1 x (4+classes) x 8400), run with onnxruntime on CPU.
+    No PyTorch at run time: ~4x less memory, fits small free servers."""
+
+    def __init__(self, path, size):
+        opts = ort.SessionOptions()
+        opts.intra_op_num_threads = config.ORT_THREADS
+        opts.enable_cpu_mem_arena = False  # lower peak memory on small servers
+        self.sess = ort.InferenceSession(str(path), opts, providers=["CPUExecutionProvider"])
+        self.input = self.sess.get_inputs()[0].name
+        self.size = size
+
+    def predict(self, img, conf, classes):
+        h, w = img.shape[:2]
+        r = min(self.size / h, self.size / w)
+        nh, nw = round(h * r), round(w * r)
+        top, left = (self.size - nh) // 2, (self.size - nw) // 2
+        canvas = np.full((self.size, self.size, 3), 114, np.uint8)
+        canvas[top:top + nh, left:left + nw] = cv2.resize(img, (nw, nh), interpolation=cv2.INTER_LINEAR)
+        x = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB).transpose(2, 0, 1)[None].astype(np.float32) / 255.0
+        out = self.sess.run(None, {self.input: x})[0][0].T          # 8400 x (4 + nc)
+        scores = out[:, 4:]
+        cls = scores.argmax(1)
+        best = scores[np.arange(len(cls)), cls]
+        keep = (best >= conf) & np.isin(cls, list(classes))
+        out, cls, best = out[keep], cls[keep], best[keep]
+        if not len(out):
+            return np.zeros((0, 4)), np.zeros(0), np.zeros(0, int)
+        cx, cy, bw, bh = out[:, 0], out[:, 1], out[:, 2], out[:, 3]
+        boxes = np.stack([cx - bw / 2 - left, cy - bh / 2 - top, cx + bw / 2 - left, cy + bh / 2 - top], 1) / r
+        boxes[:, [0, 2]] = boxes[:, [0, 2]].clip(0, w)
+        boxes[:, [1, 3]] = boxes[:, [1, 3]].clip(0, h)
+        # per-class NMS (offset trick), IoU 0.7 like the training-time default
+        off = boxes + cls[:, None] * 4096.0
+        xywh = np.concatenate([off[:, :2], off[:, 2:] - off[:, :2]], 1).tolist()
+        idx = np.array(cv2.dnn.NMSBoxes(xywh, best.tolist(), conf, 0.7)).flatten().astype(int)
+        return boxes[idx], best[idx], cls[idx]
+
+
 class Detector:
     def __init__(self):
         self.models = [
-            ("aerial", YOLO(str(config.AERIAL_WEIGHTS)), AERIAL_MAP),
-            ("ground", YOLO(str(config.GROUND_WEIGHTS)), GROUND_MAP),
+            ("aerial", OnnxYolo(config.AERIAL_WEIGHTS, config.DET_IMGSZ), AERIAL_MAP),
+            ("ground", OnnxYolo(config.GROUND_WEIGHTS, config.DET_IMGSZ), GROUND_MAP),
         ]
-        self.lock = threading.Lock()  # ultralytics predictors are not thread-safe
+        self.lock = threading.Lock()
         self.warmup()
 
     def warmup(self):
@@ -35,13 +74,7 @@ class Detector:
     def _run(self, img, offset=(0, 0)):
         out = []
         for name, model, cmap in self.models:
-            res = model.predict(img, imgsz=config.DET_IMGSZ, conf=config.DET_CONF,
-                                classes=list(cmap), verbose=False)[0]
-            if res.boxes is None or len(res.boxes) == 0:
-                continue
-            xyxy = res.boxes.xyxy.cpu().numpy()
-            conf = res.boxes.conf.cpu().numpy()
-            cls = res.boxes.cls.cpu().numpy().astype(int)
+            xyxy, conf, cls = model.predict(img, config.DET_CONF, cmap)
             for b, c, k in zip(xyxy, conf, cls):
                 out.append({
                     "box": [float(b[0] + offset[0]), float(b[1] + offset[1]),

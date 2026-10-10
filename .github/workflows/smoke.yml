@@ -1,0 +1,38 @@
+# Smoke test of the deployed site (run by hand: Actions -> smoke -> Run workflow).
+name: smoke
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Deployed site URL"
+        default: "https://parkspot.onrender.com"
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wake the service (free tier sleeps)
+        run: |
+          for i in $(seq 1 24); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "${{ inputs.url }}/api/health" || true)
+            echo "attempt $i: $code"; [ "$code" = "200" ] && exit 0; sleep 10
+          done; exit 1
+      - name: Check pages and API
+        run: |
+          set -e
+          U="${{ inputs.url }}"
+          echo "== health";  curl -sf "$U/api/health"; echo
+          echo "== home page"; curl -sf "$U/" | grep -o "<title>.*</title>"
+          echo "== SPA route"; curl -sf "$U/lot/demo" | grep -o "<title>.*</title>"
+          echo "== lots";    curl -sf "$U/api/lots"; echo
+          sleep 8
+          echo "== demo lot state"; curl -sf "$U/api/lots/demo/state" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['counts'], 'frames', d['camera']['frames_processed'], d['camera']['timing'])"
+          echo "== camera frame"; curl -sf -o frame.jpg -w "%{http_code} %{size_download} bytes\n" "$U/api/lots/demo/frame.jpg"
+          echo "== analyze sample photo"; curl -sf -F image=@data/demo/sample_frame.jpg "$U/api/analyze" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['summary'], d['layout'], d['timing'])"
+          echo "== booking flow"
+          FREE=$(curl -sf "$U/api/lots/demo/state" | python3 -c "import sys,json;d=json.load(sys.stdin);print(next(k for k,v in d['statuses'].items() if v=='free'))")
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          BID=$(curl -sf -XPOST "$U/api/lots/demo/bookings" -H 'content-type: application/json' -d "{\"spot_id\":\"$FREE\",\"arrive_at\":\"$NOW\",\"duration_min\":60}" | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])")
+          curl -sf -XPOST "$U/api/bookings/$BID/pay" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['spot_id'], d['status'], d['directions']['steps'][-1]['text'])"
+          curl -sf -XPOST "$U/api/bookings/$BID/cancel" | python3 -c "import sys,json;print('cleanup:', json.load(sys.stdin)['status'])"
+          echo "ALL CHECKS PASSED"

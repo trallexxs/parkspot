@@ -37,6 +37,8 @@ guides them to the spot ("B5: straight 23 m, then right") — on the phone and o
 | `/camera` | operator | **turn any phone into the lot camera**: create a lot from the live view (auto spot discovery), then stream a frame every 3 s |
 | `/operator/:id` | operator | annotated live camera, counts, event log (spot taken → booking moved, etc.) |
 | `/vision` | anyone / jury | upload any lot photo → vehicles, discovered spots, occupancy, timing |
+| `/label` | team | model-assisted labelling of our test set (every spot checked by a person), export JSON |
+| `/quality` | anyone / jury | measured results from `eval/evaluate.py` (nothing typed by hand) |
 
 ## Architecture
 
@@ -74,18 +76,23 @@ weights (`scripts/export_onnx.py` does the conversion).
 
 ## Quality
 
-**Not measured yet on a proper test set.** Planned: our own labelled photos/videos of Tashkent lots
-(day / night / rain), per-spot accuracy, precision/recall of free spots, and auto-layout spot recall
-vs hand-drawn spots. Numbers will be added to `eval/results/metrics.json` and shown in the app
-only after they are measured. Sanity check so far (one demo frame, checked by eye): 3 rows found,
-the 3 visible empty spots inferred, the 2 moving vehicles ignored.
+Test set = our own photos, labelled in `/label` (the model proposes spots, a person checks every
+one; corrections are counted), exported to `eval/testset/`. Run `cd backend && python ../eval/evaluate.py --robustness`.
+
+Current results (`eval/results/metrics.json`) are on a **dev set only**: 4 frames of the public
+sample clip we tuned on (52 spots; spot polygons hand-drawn by Ultralytics, occupancy labelled by
+hand; frames with a car mid-parking left out). Dev: 100% occupancy accuracy, 13/13 reference spots
+found by auto-layout. Synthetic degradations of the same frames: night 92% accuracy but only 33% of
+"free" answers correct (before the two-view fix: 71% / 12%); rain, fog, blur 100%.
+**These are not evidence of generalisation; the Tashkent test set is.**
 
 ## Known failure cases (current prototype)
 
 - Views where cars do not form clear rows (very oblique cameras, chaotic informal parking).
 - Rows with fewer than 3 visible cars are not discovered automatically.
 - Empty spots at the very ends of a row are not inferred (no neighbour to measure the gap).
-- Heavy occlusion by trees or poles; night without lighting (not yet measured).
+- Night: dark cars are missed, so occupied spots can be shown as free (synthetic night: 33% of "free" answers correct).
+- Heavy occlusion by trees or poles (not yet measured).
 - Directions are computed only for aisles that the operator marked (one line per aisle in the lot JSON).
 
 ## Run locally

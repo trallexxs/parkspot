@@ -88,11 +88,15 @@ def lot_events(lot_id: str):
 
 
 @app.post("/api/lots/{lot_id}/frame")
-async def push_frame(lot_id: str, image: UploadFile = File(...)):
-    """A phone or IP camera sends a new frame for this lot."""
+async def push_frame(lot_id: str, image: UploadFile = File(...), live: bool = Form(False)):
+    """A phone or IP camera sends a new frame for this lot (live=true smooths over frames)."""
     lot = get_lot(lot_id)
+    if lot.cfg.get("camera", {}).get("type") == "video":
+        raise HTTPException(400, "this lot is fed by a recorded camera; create your own lot to stream frames")
     img = _read_image(await image.read())
-    res = lot.process(img, smooth=False)
+    res = lot.process(img, smooth=live)
+    if lot.cfg.get("camera", {}).get("type") == "push":
+        lot.cfg["camera"]["label"] = "Live phone camera" if live else lot.cfg["camera"].get("label", "")
     return {"timing": res["timing"], "summary": res["summary"]}
 
 

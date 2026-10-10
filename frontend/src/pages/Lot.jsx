@@ -68,6 +68,8 @@ export default function Lot() {
           <button className="btn ghost" onClick={() => setShowCam((v) => !v)}>{showCam ? "Hide camera" : "Show camera view"}</button>
           <a className="btn ghost" href={`/enter/${id}`}>Walk-in (QR) flow</a>
           <a className="btn ghost" href={`/display/${id}`} target="_blank" rel="noreferrer">Entrance screen</a>
+          <a className="btn ghost" href={`/operator/${id}`}>Operator view</a>
+          {lot.camera?.type === "push" && <a className="btn ghost" href={`/camera/${id}`}>Use this phone as camera</a>}
         </div>
         {showCam && (
           <figure className="camera">

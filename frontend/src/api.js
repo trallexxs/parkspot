@@ -48,9 +48,10 @@ export const api = {
     f.append("name", name);
     return call("POST", "/api/lots", f, true);
   },
-  pushFrame: (id, file) => {
+  pushFrame: (id, file, live = true) => {
     const f = new FormData();
     f.append("image", file);
+    f.append("live", live ? "true" : "false");
     return call("POST", `/api/lots/${id}/frame`, f, true);
   },
   metrics: () => call("GET", "/api/metrics"),

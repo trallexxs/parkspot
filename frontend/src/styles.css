@@ -154,3 +154,10 @@ input { font: inherit; padding: 11px 12px; border-radius: 12px; border: 1px soli
 @media (prefers-color-scheme: dark) {
   /* keep the light look for the driver app: it mirrors the agreed mock-up */
 }
+
+/* ---- phone camera + operator ---- */
+.cam-video { width: 100%; border-radius: 12px; background: #000; min-height: 200px; }
+.app:has(.wide-page) { max-width: 1100px; }
+.operator-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .operator-grid { grid-template-columns: 3fr 2fr; } }
+.event { display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid var(--line); padding-bottom: 8px; font-size: 14px; }

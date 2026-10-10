@@ -25,6 +25,10 @@ export default function Home() {
           </div>
         </Link>
       ))}
+      <Link to="/camera" className="card cta">
+        <b>Set up a real lot with your phone camera →</b>
+        <div className="muted small">Mount a phone facing the lot: spots are found automatically and the map goes live.</div>
+      </Link>
       <Link to="/vision" className="card cta">
         <b>Add a parking lot from one photo →</b>
         <div className="muted small">Our model finds the rows and spots by itself — no manual setup.</div>

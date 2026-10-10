@@ -7,6 +7,8 @@ import Tickets from "./pages/Tickets.jsx";
 import Enter from "./pages/Enter.jsx";
 import Display from "./pages/Display.jsx";
 import Vision from "./pages/Vision.jsx";
+import Camera from "./pages/Camera.jsx";
+import Operator from "./pages/Operator.jsx";
 
 export default function App() {
   const { pathname } = useLocation();
@@ -23,6 +25,9 @@ export default function App() {
           <Route path="/session/:sid" element={<Enter />} />
           <Route path="/display/:id" element={<Display />} />
           <Route path="/vision" element={<Vision />} />
+          <Route path="/camera" element={<Camera />} />
+          <Route path="/camera/:id" element={<Camera />} />
+          <Route path="/operator/:id" element={<Operator />} />
         </Routes>
       </main>
       {!fullscreen && <BottomNav />}

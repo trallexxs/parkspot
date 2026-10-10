@@ -31,6 +31,19 @@ guides them to the spot ("B5: straight 23 m, then right") — on the phone and o
 6. **Directions from camera geometry** (`guidance.py`): distance along the aisle and left/right side
    come from the spot positions in the image; pixels → metres via the measured spot pitch.
 
+## Pages
+
+| URL | who | what |
+|---|---|---|
+| `/` | driver | lots with live free counts |
+| `/lot/:id` | driver | live spot map, book a spot (sandbox pay), directions |
+| `/booking/:id` | driver | ticket with QR, check-in at the gate, live status |
+| `/enter/:id` | driver | walk-in: QR at the gate → suggested spot → pay before exit |
+| `/display/:id` | entrance screen | free count, nearest spot with big arrows, QR to enter |
+| `/camera` | operator | **turn any phone into the lot camera**: create a lot from the live view (auto spot discovery), then stream a frame every 3 s |
+| `/operator/:id` | operator | annotated live camera, counts, event log (spot taken → booking moved, etc.) |
+| `/vision` | anyone / jury | upload any lot photo → vehicles, discovered spots, occupancy, timing |
+
 ## Architecture
 
 ```
@@ -46,7 +59,8 @@ camera frame ─► quality gate ─► (enhance) ─► YOLO aerial ┐
                      REST API (FastAPI) ─► React app: map, booking, ticket QR, walk-in, entrance screen, Vision
 ```
 
-Inference runs **on a server CPU** (no GPU needed). One server handles many cameras because a
+Inference runs **on a server CPU** (no GPU needed); cameras (an IP camera, or simply a phone on a
+tripod via `/camera`) only send JPEG frames. Server memory with both models loaded: ~680 MB. One server handles many cameras because a
 parking spot changes state on a scale of minutes: one frame every few seconds per camera is enough.
 
 ## Measured speed (prototype hardware)

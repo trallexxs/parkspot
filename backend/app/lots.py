@@ -290,9 +290,10 @@ def state(lot):
     held = _held_bookings(lot.id, now)
     walk = _walkin_holds(lot.id, now)
 
-    if lot.updated_at is None:
-        # no camera frame yet (new server, camera phone not started): we do not know, so we do not
-        # guess. Unknown spots are never offered as free, booked or suggested.
+    if not camera_online(lot):
+        # no camera frame yet (new server, camera phone not started), or none for CAMERA_OFFLINE_S
+        # (camera offline): we do not know, so we do not guess. Unknown spots are never offered as
+        # free, booked or suggested; real bookings still show as reserved.
         raw = {s["id"]: "unknown" for s in lot.spots}
     else:
         raw = {s["id"]: ("occupied" if cv.get(s["id"], {}).get("occupied") else "free") for s in lot.spots}

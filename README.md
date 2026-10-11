@@ -4,6 +4,9 @@
 
 **Live site:** https://parkspot-5bo4.onrender.com (free tier: open it a minute before use, it sleeps when idle) · `GET /api/health` shows the running commit
 
+**New to the code?** [docs/GUIDE.md](docs/GUIDE.md) explains every folder and file in plain English,
+with short answers to the questions a jury is likely to ask.
+
 Track: Computer Vision · Mode: **Startup**
 
 Parking lots already have cameras, or can get one: a phone mounted above the lot. ParkDet turns

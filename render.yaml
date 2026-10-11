@@ -8,5 +8,3 @@ services:
     envVars:
       - key: ORT_THREADS
         value: "1"
-      - key: CAMERA_INTERVAL_S
-        value: "3"

@@ -25,8 +25,9 @@ const SearchIcon = () => (
   </svg>
 );
 
-export default function Lot() {
-  const { id } = useParams();
+export default function Lot({ id: idProp }) {
+  const { id: idParam } = useParams();
+  const id = idProp || idParam; // the Spots section shows a lot without a /lot/:id address
   const nav = useNavigate();
   const [lot, setLot] = useState(null);
   const [state] = usePoll(() => api.state(id), 2000, [id]);

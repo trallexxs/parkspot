@@ -29,7 +29,7 @@ export default function Display() {
         </div>
         <div className="display-qr">
           <QR value={`${window.location.origin}/enter/${id}`} size={200} />
-          <div>Scan to enter<br />pay before you leave</div>
+          <div>Scan to enter<br />payment is automatic</div>
         </div>
       </div>
       {dir && online && (

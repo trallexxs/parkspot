@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { CarTop } from "./Icons.jsx";
 
-function Spot({ id, status, selected, onSelect, mine, changed }) {
-  const cls = ["spot", status || "unknown", selected ? "selected" : "", mine ? "mine" : "", changed ? "changed" : ""].join(" ");
-  const clickable = status === "free" && onSelect;
+function Spot({ id, status, selected, onSelect, mine, changed, pickable, hint, onPick }) {
+  const cls = ["spot", status || "unknown", selected ? "selected" : "", mine ? "mine" : "", changed ? "changed" : "",
+    hint ? "hint" : ""].join(" ");
+  const free = status === "free" && onSelect;
+  const pick = pickable && onPick; // e.g. a walk-in driver tapping the (taken) spot he parked in
   return (
-    <button className={cls} data-spot={id} disabled={!clickable} onClick={() => clickable && onSelect(id)} aria-label={`${id} ${status || "unknown"}`}>
+    <button className={cls} data-spot={id} disabled={!free && !pick} onClick={() => (free ? onSelect(id) : pick && onPick(id))}
+      aria-label={`${id} ${status || "unknown"}${mine ? ", yours" : ""}`}>
       {status === "occupied" || status === "conflict" ? <CarTop /> : null}
       <span className="spot-id">{id}</span>
     </button>
@@ -37,12 +40,13 @@ function useChanged(statuses) {
 
 /** Seat-map style view. Aisles are drawn as a road with the driver's left/right columns;
  *  the entrance is at the bottom so "left" on screen = driver's left. */
-export default function SpotMap({ map, statuses, selected, onSelect, mine }) {
+export default function SpotMap({ map, statuses, selected, onSelect, mine, pickable, hint, onPick }) {
   const changed = useChanged(statuses);
   if (!map) return null;
   const st = statuses || {};
   const spot = (id) => (
-    <Spot key={id} id={id} status={st[id]} selected={selected === id} mine={mine === id} changed={changed[id]} onSelect={onSelect} />
+    <Spot key={id} id={id} status={st[id]} selected={selected === id} mine={mine === id} changed={changed[id]} onSelect={onSelect}
+      pickable={pickable?.includes(id)} hint={hint?.includes(id)} onPick={onPick} />
   );
   return (
     <div className="spot-map">

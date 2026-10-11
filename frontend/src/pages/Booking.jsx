@@ -72,7 +72,7 @@ export default function Booking() {
       {b.status === "confirmed" && (
         <div className="card center">
           <QR value={`${window.location.origin}/booking/${b.id}`} />
-          <p className="muted small">Show this at the gate, or press the button when you arrive.</p>
+          <p className="muted small">No need to scan anything: press the button when you arrive. Show this code only if staff ask.</p>
           <button className="btn primary lg wide" disabled={!!busy} aria-busy={busy === "checkin"} onClick={() => act("checkin", api.checkin)}>I'm at the entrance — check in</button>
           <button className="btn ghost wide" disabled={!!busy} aria-busy={busy === "cancel"} onClick={() => act("cancel", api.cancel)}>Cancel booking</button>
         </div>

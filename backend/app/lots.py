@@ -262,10 +262,12 @@ def _held_bookings(lot_id, now):
 
 
 def _walkin_holds(lot_id, now):
-    rows = store.q("SELECT * FROM sessions WHERE lot_id=? AND status='active'", (lot_id,))
+    """Spots that walk-in drivers chose and have not parked in yet: held WALKIN_HOLD_MIN from the choice."""
+    rows = store.q("SELECT * FROM sessions WHERE lot_id=? AND status='active' AND spot_id IS NOT NULL "
+                   "AND parked_spot IS NULL", (lot_id,))
     out = {}
     for s in rows:
-        if s["spot_id"] and now - store.parse(s["started_at"]) < timedelta(minutes=config.WALKIN_HOLD_MIN):
+        if now - store.parse(s["spot_at"] or s["started_at"]) < timedelta(minutes=config.WALKIN_HOLD_MIN):
             out[s["spot_id"]] = s
     return out
 
@@ -298,9 +300,14 @@ def state(lot):
     else:
         raw = {s["id"]: ("occupied" if cv.get(s["id"], {}).get("occupied") else "free") for s in lot.spots}
     statuses = dict(raw)
-    for sid in walk:
+    for sid, s in walk.items():
         if raw.get(sid) == "free":
             statuses[sid] = "reserved"
+        elif raw.get(sid) == "occupied":
+            # the camera sees a car arrive in the spot this walk-in driver chose: he has parked
+            store.q("UPDATE sessions SET parked_spot=?, parked_at=?, parked_by='camera' "
+                    "WHERE id=? AND parked_spot IS NULL", (sid, store.iso(now), s["id"]))
+            store.log(lot.id, "walkin_parked_confirmed", sid, session=s["id"])
     for sid, b in held.items():
         if b["status"] in ("confirmed", "pending_payment"):
             statuses[sid] = "conflict" if raw.get(sid) == "occupied" else "reserved"

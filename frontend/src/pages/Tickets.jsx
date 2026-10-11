@@ -22,7 +22,7 @@ export default function Tickets() {
             <div className="muted small">{kind === "booking" ? `Booking · ${new Date(d.arrive_at).toLocaleString()}` : `Drive-in · ${new Date(d.started_at).toLocaleString()}`}</div>
           </div>
           <div className="ticket-right">
-            <b>{d.spot_id || "—"}</b>
+            <b>{d.parked_spot || d.spot_id || "—"}</b>
             <span className={"status-pill " + d.status}>{d.status.replace("_", " ")}</span>
           </div>
         </Link>

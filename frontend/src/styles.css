@@ -43,6 +43,7 @@
   --lens-2: rgba(214, 226, 255, .6);
   --lens-edge: rgba(255, 255, 255, .95);
   --lens-glow: rgba(31, 95, 224, .2);
+  --glass-ring: rgba(255, 255, 255, .9);
   --shadow: 0 1px 2px rgba(15, 26, 43, .04), 0 6px 20px rgba(15, 26, 43, .06);
   --shadow-lg: 0 10px 40px rgba(15, 26, 43, .16);
   --radius: 18px;
@@ -95,6 +96,7 @@
     --lens-2: rgba(76, 134, 255, .14);
     --lens-edge: rgba(255, 255, 255, .18);
     --lens-glow: rgba(76, 134, 255, .28);
+    --glass-ring: rgba(22, 31, 49, .95);
     --shadow: none;
     --shadow-lg: 0 10px 40px rgba(0, 0, 0, .5);
   }
@@ -319,6 +321,47 @@ a.kv:hover b { color: var(--brand); }
 .nav-item.active { color: var(--brand); }
 .nav-item.active svg { transform: scale(1.08); }
 .nav-item:active { transform: scale(.94); }
+/* the round QR button in the middle of the menu, raised above the bar */
+.nav-scan { color: var(--text); }
+.scan-btn { width: 54px; height: 54px; margin-top: -30px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: linear-gradient(160deg, var(--brand-2), var(--brand)); box-shadow: 0 0 0 4px var(--glass-ring), 0 10px 22px color-mix(in srgb, var(--brand) 42%, transparent), inset 0 1px 0 rgba(255, 255, 255, .35); transition: transform .2s var(--ease), box-shadow .2s; }
+.nav-item .scan-btn svg { width: 28px; height: 28px; }
+.nav-scan:active { transform: none; }
+.nav-scan:active .scan-btn { transform: scale(.9); }
+
+/* ---- QR scanner (full screen) ---- */
+.scan { position: fixed; inset: 0; background: #000; color: #fff; display: flex; flex-direction: column; overflow: hidden; z-index: 40; }
+.scan-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.scan-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 12px; padding: calc(14px + env(safe-area-inset-top)) 16px 14px; background: linear-gradient(rgba(0, 0, 0, .55), transparent); }
+.scan-x { width: 42px; height: 42px; flex: none; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .14); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; font-size: 26px; line-height: 1; cursor: pointer; }
+.scan-title { font-weight: 750; font-size: 17px; }
+.scan-frame { position: relative; z-index: 1; margin: auto; width: min(68vw, 46vh, 300px); aspect-ratio: 1; border-radius: 28px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .45); }
+.scan-frame i { position: absolute; width: 46px; height: 46px; border: 4px solid #fff; filter: drop-shadow(0 0 6px rgba(0, 0, 0, .4)); }
+.scan-frame i:nth-child(1) { top: -2px; left: -2px; border-right: 0; border-bottom: 0; border-top-left-radius: 28px; }
+.scan-frame i:nth-child(2) { top: -2px; right: -2px; border-left: 0; border-bottom: 0; border-top-right-radius: 28px; }
+.scan-frame i:nth-child(3) { bottom: -2px; left: -2px; border-right: 0; border-top: 0; border-bottom-left-radius: 28px; }
+.scan-frame i:nth-child(4) { bottom: -2px; right: -2px; border-left: 0; border-top: 0; border-bottom-right-radius: 28px; }
+.scan-frame b { position: absolute; left: 14px; right: 14px; height: 2px; top: 12%; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0; }
+.scan-frame.live b { opacity: 1; animation: scan-line 2.2s ease-in-out infinite; }
+@keyframes scan-line { 50% { top: 88%; } }
+.scan-panel { position: relative; z-index: 2; margin: 0 12px calc(12px + env(safe-area-inset-bottom)); padding: 16px; border-radius: 24px; background: rgba(20, 28, 44, .66); backdrop-filter: blur(18px) saturate(1.6); -webkit-backdrop-filter: blur(18px) saturate(1.6); border: 1px solid rgba(255, 255, 255, .14); display: flex; flex-direction: column; gap: 10px; text-align: center; font-size: 15px; line-height: 1.45; }
+.scan-panel p { margin: 0; }
+.scan-msg { color: #fecaca; font-weight: 650; }
+.btn.scan-photo { background: rgba(255, 255, 255, .14); color: #fff; border-color: rgba(255, 255, 255, .22); }
+.scan-photo input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+.scan-note { font-size: 13px; color: rgba(255, 255, 255, .75); }
+@media (min-width: 900px) { .scan-panel { width: 440px; margin: 0 auto 24px; } }
+
+/* ---- Spots section + walk-in visit ---- */
+.lot-switch { display: flex; gap: 8px; overflow-x: auto; padding: 16px 16px 0; scrollbar-width: none; }
+.lot-switch::-webkit-scrollbar { display: none; }
+.lot-switch .chip { flex: none; }
+.paid-head { display: flex; gap: 12px; align-items: center; }
+.paid-tick { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--free-soft); color: var(--free); font-weight: 900; font-size: 18px; }
+.parked-line { font-size: 16px; }
+.spot.occupied:not(:disabled), .spot.conflict:not(:disabled) { cursor: pointer; }
+.spot.hint { animation: hint-pulse 1.4s ease-in-out infinite; }
+@keyframes hint-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--taken) 45%, transparent); } 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--taken) 16%, transparent); } }
+.spinner-lg { width: 44px; height: 44px; border-radius: 50%; border: 4px solid var(--brand-soft); border-top-color: var(--brand); animation: spin .9s linear infinite; margin: 6px auto; }
 
 /* switching section: the new page slides in from the side its menu item is on, the old one slides out;
    the menu stays put (its bubble moves on its own) */

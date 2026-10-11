@@ -1,11 +1,14 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { CameraIcon, HomeIcon, TicketIcon } from "./Icons.jsx";
+import { CameraIcon, HomeIcon, QrIcon, SpotsIcon, TicketIcon } from "./Icons.jsx";
 
+// the round QR button sits in the middle, one tap away on every page; it opens the scanner (/scan)
 const TABS = [
   { to: "/", Icon: HomeIcon, label: "Map" },
-  { to: "/tickets", Icon: TicketIcon, label: "My tickets" },
+  { to: "/spots", Icon: SpotsIcon, label: "Spots" },
+  { to: "/scan", Icon: QrIcon, label: "Scan", scan: true },
+  { to: "/tickets", Icon: TicketIcon, label: "Tickets" },
   { to: "/vision", Icon: CameraIcon, label: "Vision" },
 ];
 const tabIndex = (path) => TABS.findIndex((t) => t.to === path);
@@ -39,8 +42,8 @@ export default function BottomNav() {
     return () => window.removeEventListener("resize", onResize);
   }, [active]);
 
-  function go(e, to) {
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  function go(e, to, scan) {
+    if (scan || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; // the scanner opens full screen
     if (to === pathname || !document.startViewTransition || reducedMotion()) return; // plain navigation
     e.preventDefault();
     const root = document.documentElement;
@@ -58,10 +61,11 @@ export default function BottomNav() {
   return (
     <nav className="bottom-nav" ref={navRef}>
       {lens && <span className="nav-lens" style={lensStyle} aria-hidden="true" />}
-      {TABS.map(({ to, Icon, label }, i) => (
-        <NavLink key={to} to={to} end={to === "/"} ref={(el) => { itemRefs.current[i] = el; }} onClick={(e) => go(e, to)}
-          className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}>
-          <Icon />
+      {TABS.map(({ to, Icon, label, scan }, i) => (
+        <NavLink key={to} to={to} end={to === "/"} ref={(el) => { itemRefs.current[i] = scan ? null : el; }}
+          onClick={(e) => go(e, to, scan)} aria-label={scan ? "Scan the parking QR code" : undefined}
+          className={({ isActive }) => "nav-item" + (scan ? " nav-scan" : "") + (isActive ? " active" : "")}>
+          {scan ? <span className="scan-btn"><Icon size={28} /></span> : <Icon />}
           <span>{label}</span>
         </NavLink>
       ))}

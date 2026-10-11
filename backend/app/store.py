@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS bookings (
 );
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY, lot_id TEXT, spot_id TEXT, started_at TEXT, ended_at TEXT,
-  card_last4 TEXT, paid_amount INTEGER DEFAULT 0, payment_ref TEXT, status TEXT
+  card_last4 TEXT, paid_amount INTEGER DEFAULT 0, payment_ref TEXT, status TEXT,
+  spot_at TEXT, parked_spot TEXT, parked_at TEXT, parked_by TEXT, free_at_start TEXT
 );
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT, lot_id TEXT, at TEXT, kind TEXT, spot_id TEXT, detail TEXT
@@ -46,6 +47,12 @@ def conn():
             _conn = sqlite3.connect(config.DB_PATH, check_same_thread=False)
             _conn.row_factory = sqlite3.Row
             _conn.executescript(SCHEMA)
+            # a database file from an older version: add the walk-in columns it lacks
+            have = {r[1] for r in _conn.execute("PRAGMA table_info(sessions)")}
+            for col in ("spot_at", "parked_spot", "parked_at", "parked_by", "free_at_start"):
+                if col not in have:
+                    _conn.execute(f"ALTER TABLE sessions ADD COLUMN {col} TEXT")
+            _conn.commit()
         return _conn
 
 

@@ -14,15 +14,19 @@ import Label from "./pages/Label.jsx";
 import OperatorHome from "./pages/OperatorHome.jsx";
 import Setup from "./pages/Setup.jsx";
 import Quality from "./pages/Quality.jsx";
+import Spots from "./pages/Spots.jsx";
+import Scan from "./pages/Scan.jsx";
 
 export default function App() {
   const { pathname } = useLocation();
-  const fullscreen = pathname.startsWith("/display");
+  const fullscreen = pathname.startsWith("/display") || pathname === "/scan";
   return (
     <div className={fullscreen ? "app full" : "app"}>
       <main className="content">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/spots" element={<Spots />} />
+          <Route path="/scan" element={<Scan />} />
           <Route path="/lot/:id" element={<Lot />} />
           <Route path="/booking/:bid" element={<Booking />} />
           <Route path="/tickets" element={<Tickets />} />

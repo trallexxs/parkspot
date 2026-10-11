@@ -12,7 +12,9 @@ const TEXT = {
   booking_checked_in: "Driver checked in at the gate", booking_cancelled: "Booking cancelled",
   booking_reassigned: "Spot taken by another car → booking moved", parked_confirmed: "Camera confirmed: booked car parked",
   no_show_released: "No-show → spot released", walkin_entered: "Walk-in entered",
-  walkin_paid_sandbox: "Walk-in paid (sandbox)", walkin_autocharged_sandbox: "Walk-in card charged at exit (sandbox)",
+  walkin_paid_sandbox: "Walk-in paid (sandbox)", walkin_autocharged_sandbox: "Walk-in charged automatically (sandbox)",
+  walkin_spot_chosen: "Walk-in chose a spot", walkin_parked_confirmed: "Camera confirmed: walk-in car parked",
+  walkin_parked_marked: "Walk-in driver marked their spot",
   walkin_exited: "Walk-in left", lot_created: "Lot created from the camera view", lot_restored: "Lot restored after a server restart",
   lot_setup_saved: "Spots / aisle / location saved",
 };
@@ -99,7 +101,7 @@ export default function Operator() {
               <Link className="btn ghost" to={`/camera/${id}`}>This phone = the camera</Link>
               <Link className="btn ghost" to={`/lot/${id}`}>Driver page</Link>
               <a className="btn ghost" href={`/display/${id}`} target="_blank" rel="noreferrer">Entrance screen</a>
-              <a className="btn ghost" href={`/enter/${id}`} target="_blank" rel="noreferrer">Walk-in page (gate QR)</a>
+              <a className="btn ghost" href={`/enter/${id}`} target="_blank" rel="noreferrer">Try the gate QR (test visit)</a>
               <button className="btn ghost" onClick={() => api.exportLot(id, pin).then((cfg) => download(`${id}.json`, cfg))}>Download backup</button>
             </div>
           )}

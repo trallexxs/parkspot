@@ -102,7 +102,7 @@ def lot_raw(lot_id: str, pin: str = "", x_lot_pin: str | None = Header(None)):
 
 @app.get("/api/lots/{lot_id}/nearest")
 def lot_nearest(lot_id: str):
-    """"Find me a spot": the free spot a walk-in driver would be given now (same rule), not held."""
+    """"Find me a spot": the free spot suggested at the entrance now (same rule everywhere), not held."""
     lot = get_lot(lot_id)
     st = lots.state(lot)
     if not st["camera"]["online"]:
@@ -370,9 +370,20 @@ def cancel_booking(bid: str):
 
 
 # ------------------------------------------------------------------ walk-in sessions (QR at the gate)
+# Scan the gate QR -> the first hour is charged at once (SANDBOX: a test card, no real money) -> the
+# driver may choose a free spot (held WALKIN_HOLD_MIN) or just park and tap his spot -> on leaving, each
+# further started hour is charged automatically.
 
 def _session_out(s):
     lot = lots.LOTS.get(s["lot_id"])
+    taken_since_entry = []
+    if lot and s["status"] == "active":
+        st = lots.state(lot)          # may mark the session as parked (the camera saw the car arrive)
+        s = _get_session(s["id"])
+        if not s["parked_spot"]:
+            # spots that were free when the driver entered and have a car now: one of them is probably his
+            taken_since_entry = [k for k in json.loads(s["free_at_start"] or "[]")
+                                 if st["statuses"].get(k) in ("occupied", "conflict")]
     s = dict(s)
     start = store.parse(s["started_at"])
     end = store.parse(s["ended_at"]) if s["ended_at"] else store.now()
@@ -380,12 +391,18 @@ def _session_out(s):
     s["minutes"] = round(minutes, 1)
     s["amount_total"] = lots.price(lot, minutes) if lot else 0
     s["amount_due"] = max(0, s["amount_total"] - (s["paid_amount"] or 0))
+    s["first_hour_price"] = lots.price(lot, 60) if lot else 0
+    s["extra_hour_price"] = int(lot.cfg.get("price_extra_hour", config.EXTRA_HOUR_PRICE)) if lot else 0
     s["lot_name"] = lot.cfg["name"] if lot else ""
     s["currency"] = lot.cfg.get("currency", "UZS") if lot else ""
-    s["directions"] = directions(lot.cfg, s["spot_id"]) if lot and s["spot_id"] else None
-    # the suggested spot is held for a walk-in driver for WALKIN_HOLD_MIN (lots._walkin_holds)
-    s["hold_until"] = (store.iso(start + timedelta(minutes=config.WALKIN_HOLD_MIN))
-                       if s["status"] == "active" and s["spot_id"] else None)
+    s["taken_since_entry"] = taken_since_entry
+    held = s["status"] == "active" and s["spot_id"] and not s["parked_spot"]
+    s["directions"] = directions(lot.cfg, s["spot_id"]) if lot and held else None
+    # a chosen spot is held for the walk-in driver for WALKIN_HOLD_MIN from the choice (lots._walkin_holds)
+    since = store.parse(s["spot_at"] or s["started_at"])
+    s["hold_start"] = store.iso(since) if held else None
+    s["hold_until"] = store.iso(since + timedelta(minutes=config.WALKIN_HOLD_MIN)) if held else None
+    s.pop("free_at_start", None)
     return s
 
 
@@ -396,15 +413,26 @@ def _get_session(sid):
     return s
 
 
+def _active_session(sid):
+    s = _get_session(sid)
+    if s["status"] != "active":
+        raise HTTPException(400, f"session is {s['status']}")
+    return s
+
+
 @app.post("/api/lots/{lot_id}/sessions")
 def start_session(lot_id: str):
     lot = get_lot(lot_id)
     st = lots.state(lot)
-    spot = lots.nearest_free(lot, st["statuses"]) if st["camera"]["online"] else None
+    free = [k for k, v in st["statuses"].items() if v == "free"]
+    first = lots.price(lot, 60)
     sid = store.new_id("ss")
-    store.q("INSERT INTO sessions (id, lot_id, spot_id, started_at, status) VALUES (?,?,?,?,?)",
-            (sid, lot_id, spot, store.iso(store.now()), "active"))
-    store.log(lot_id, "walkin_entered", spot, session=sid)
+    store.q("INSERT INTO sessions (id, lot_id, spot_id, started_at, status, card_last4, paid_amount, payment_ref,"
+            " free_at_start) VALUES (?,?,?,?,?,?,?,?,?)",
+            (sid, lot_id, None, store.iso(store.now()), "active", "4242", first, store.new_id("sandbox_card"),
+             json.dumps(free)))
+    store.log(lot_id, "walkin_entered", None, session=sid)
+    store.log(lot_id, "walkin_autocharged_sandbox", None, session=sid, amount=first, paid_for="first hour")
     return _session_out(_get_session(sid))
 
 
@@ -413,43 +441,51 @@ def get_session(sid: str):
     return _session_out(_get_session(sid))
 
 
-class CardIn(BaseModel):
-    number: str
+class SpotIn(BaseModel):
+    spot_id: str
 
 
-@app.post("/api/sessions/{sid}/card")
-def attach_card(sid: str, body: CardIn):
-    """SANDBOX: only test cards, only the last 4 digits are stored."""
-    digits = "".join(ch for ch in body.number if ch.isdigit())
-    if len(digits) < 12:
-        raise HTTPException(400, "card number too short")
-    store.q("UPDATE sessions SET card_last4=? WHERE id=?", (digits[-4:], sid))
+@app.post("/api/sessions/{sid}/spot")
+def choose_session_spot(sid: str, body: SpotIn):
+    """Optional: the walk-in driver chooses a free spot; it is held for him for WALKIN_HOLD_MIN."""
+    s = _active_session(sid)
+    if s["parked_spot"]:
+        raise HTTPException(400, "you have already parked")
+    lot = get_lot(s["lot_id"])
+    st = lots.state(lot)
+    if not st["camera"]["online"]:
+        raise HTTPException(409, "The camera is offline, so no spot can be confirmed right now.")
+    if st["statuses"].get(body.spot_id) != "free" and body.spot_id != s["spot_id"]:
+        raise HTTPException(409, f"{body.spot_id} is not free any more. Please choose another spot.")
+    store.q("UPDATE sessions SET spot_id=?, spot_at=? WHERE id=?", (body.spot_id, store.iso(store.now()), sid))
+    store.log(s["lot_id"], "walkin_spot_chosen", body.spot_id, session=sid)
     return _session_out(_get_session(sid))
 
 
-@app.post("/api/sessions/{sid}/pay")
-def pay_session(sid: str):
-    s = _session_out(_get_session(sid))
-    if s["amount_due"] <= 0:
-        return s
-    store.q("UPDATE sessions SET paid_amount=?, payment_ref=? WHERE id=?",
-            (s["amount_total"], store.new_id("sandbox"), sid))
-    store.log(s["lot_id"], "walkin_paid_sandbox", s["spot_id"], session=sid, amount=s["amount_due"])
+@app.post("/api/sessions/{sid}/parked")
+def mark_session_parked(sid: str, body: SpotIn):
+    """The driver taps the spot he parked in. The camera must see a car there (it cannot tell whose car)."""
+    s = _active_session(sid)
+    lot = get_lot(s["lot_id"])
+    st = lots.state(lot)
+    if st["statuses"].get(body.spot_id) not in ("occupied", "conflict"):
+        raise HTTPException(409, f"The camera does not see a car in {body.spot_id} yet. "
+                                 "Wait a few seconds after parking, then tap it again.")
+    store.q("UPDATE sessions SET spot_id=?, parked_spot=?, parked_at=?, parked_by='driver' WHERE id=?",
+            (body.spot_id, body.spot_id, store.iso(store.now()), sid))
+    store.log(s["lot_id"], "walkin_parked_marked", body.spot_id, session=sid)
     return _session_out(_get_session(sid))
 
 
 @app.post("/api/sessions/{sid}/exit")
 def exit_session(sid: str):
-    s = _session_out(_get_session(sid))
-    if s["status"] != "active":
-        raise HTTPException(400, f"session is {s['status']}")
+    """Leaving: each further started hour is charged automatically with the visit's card (SANDBOX)."""
+    s = _session_out(_active_session(sid))
     if s["amount_due"] > 0:
-        if not s["card_last4"]:
-            raise HTTPException(402, json.dumps({"amount_due": s["amount_due"],
-                                                 "message": "Please pay before leaving"}))
         store.q("UPDATE sessions SET paid_amount=?, payment_ref=? WHERE id=?",
                 (s["amount_total"], store.new_id("sandbox_card"), sid))
-        store.log(s["lot_id"], "walkin_autocharged_sandbox", s["spot_id"], session=sid, amount=s["amount_due"])
+        store.log(s["lot_id"], "walkin_autocharged_sandbox", s["spot_id"], session=sid, amount=s["amount_due"],
+                  paid_for="extra hours")
     store.q("UPDATE sessions SET status='exited', ended_at=? WHERE id=?", (store.iso(store.now()), sid))
     store.log(s["lot_id"], "walkin_exited", s["spot_id"], session=sid)
     return _session_out(_get_session(sid))

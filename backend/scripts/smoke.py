@@ -5,7 +5,8 @@
 Checks the pages, photo-analysis timing, and the whole real-lot flow without any stored photo:
 it restores a private (never published) test lot with a known PIN, checks that nothing is offered
 before the camera has sent a picture, sends one camera frame, then checks privacy (PIN needed),
-booking, sandbox payment, in-lot directions and cancellation. Standard library only.
+booking, sandbox payment, in-lot directions, cancellation and a walk-in visit (first hour paid
+automatically, chosen spot held, nothing more to pay when leaving within the hour). Standard library only.
 """
 import hashlib
 import json
@@ -142,6 +143,19 @@ st, _ = req("GET", f"/api/lots/{lot_id}/state")
 check(st["statuses"]["B5"] == "reserved", "the booked spot shows as reserved")
 c, _ = req("POST", f"/api/bookings/{b['id']}/cancel")
 check(c["status"] == "cancelled", "booking cancelled (cleanup)")
+# walk-in: scan the gate QR -> the first hour is paid automatically (sandbox) -> optionally choose a spot
+w, _ = req("POST", f"/api/lots/{lot_id}/sessions")
+check(w["status"] == "active" and w["paid_amount"] == 5000 and w["card_last4"] == "4242" and not w["spot_id"],
+      "walk-in: first hour (5 000 so'm) paid automatically on entry (sandbox test card)")
+w, _ = req("POST", f"/api/sessions/{w['id']}/spot", {"spot_id": "A3"})
+check(w["spot_id"] == "A3" and w["hold_until"] and w["directions"], "walk-in: the chosen spot is held, with directions")
+st, _ = req("GET", f"/api/lots/{lot_id}/state")
+check(st["statuses"]["A3"] == "reserved", "walk-in: the chosen spot shows as reserved")
+req("POST", f"/api/sessions/{w['id']}/parked", {"spot_id": "A4"}, expect=409)
+check(True, "walk-in: a spot with no car in it cannot be marked as 'I parked here'")
+x, _ = req("POST", f"/api/sessions/{w['id']}/exit")
+check(x["status"] == "exited" and x["amount_due"] == 0 and x["paid_amount"] == 5000,
+      "walk-in: leaving within the first hour charges nothing more")
 img, _ = req("GET", f"/api/lots/{lot_id}/frame.jpg?pin={pin}")
 check(img[:2] == b"\xff\xd8", "operator gets the pixelated camera image with the PIN")
 print("ALL CHECKS PASSED")

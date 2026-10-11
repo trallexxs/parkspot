@@ -178,7 +178,7 @@ version would integrate a local provider (Payme / Click / Uzum) — out of scope
 
 ## Business-rule assumptions (configurable in `backend/app/config.py`)
 
-Price 5 000 so'm per started hour (demo value) · booked spot held from 30 min before arrival until
+Price: 5 000 so'm for the first started hour, 2 000 so'm for each further started hour; each payment is split 50% to the parking lot, 50% to ParkDet · booked spot held from 30 min before arrival until
 15 min after · unpaid booking holds the spot 10 min · suggested walk-in spot held 5 min.
 
 ## Data sources, models and licences

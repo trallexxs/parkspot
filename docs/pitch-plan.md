@@ -11,22 +11,25 @@ Mode on slide 1: **Startup**. ParkDet = **Park**ing **Det**ector — "free parki
 | 1 | Cover: ParkDet = Parking Detector, mode, team | Bahridin | 0:00–0:15 | Presentation |
 | 2 | Problem → solution (3 problems, 4 answers) | Bahridin | 0:15–1:00 | Impact |
 | 3 | **Live demo** — map, booking, jury's photo, operator | Bobur | 1:00–3:00 | Presentation, Technical |
-| 4 | Technology: how it works, measured, real conditions, accuracy, open models vs ours | Amirxon | 3:00–4:45 | Technical, Innovation |
-| 5 | Competitors in Uzbekistan: strong and weak points vs ParkDet | Amirxon | 4:45–5:30 | Innovation, Business |
-| 6 | Business model + 3-month pilot + our ask | Bahridin | 5:30–7:00 | Business, Impact |
+| 4 | Product demo: the app's main screens (screenshots) | Bobur | 3:00–3:20 | Presentation |
+| 5 | Technology: how it works, measured, real conditions, open models vs ours | Amirxon | 3:20–4:45 | Technical, Innovation |
+| 6 | Competitors in Uzbekistan: strong and weak points vs ParkDet | Amirxon | 4:45–5:30 | Innovation, Business |
+| 7 | Business model (5 000 so'm first hour + 2 000 so'm each extra hour; 50% lot / 50% ParkDet) + 3-month pilot + our ask | Bahridin | 5:30–6:50 | Business, Impact |
+| 8 | Thanks for watching | Bahridin | 6:50–7:00 | Presentation |
 
-The team-only demo runbook is in the notes of slide 4. Q&A owners: CV/model → Amirxon ·
+Every slide has a Morph transition (PowerPoint 2019 / 365); other apps fall back to a fade.
+
+The team-only demo runbook is in the notes of slide 5. Q&A owners: CV/model → Amirxon ·
 app/demo/deploy → Bobur · business/pilot → Bahridin.
 
 ## Placeholders to fill before the defence (never with guesses)
 
-- Slide 4: accuracy on our own Tashkent photos (`/label` → `eval/evaluate.py` → `/quality`).
-- Slide 6: subscription price, booking fee, server price, phone price, pilot cost, payback months —
-  from real quotes, or say aloud "hypothesis for the pilot"; the pilot lot (e.g. WIUT).
+- Slide 7: server price, phone price, pilot cost, payback months — from real quotes, or say aloud
+  "hypothesis for the pilot"; the pilot lot (e.g. WIUT).
 - Slide 2 (spoken only): one sentence of real evidence, if the team has it.
 - Slide 1: speaker photos (replace the three circles).
 
-## Competitor sources (slide 5; checked 10 Oct 2026 from search results — open each once)
+## Competitor sources (slide 6; checked 10 Oct 2026 from search results — open each once)
 
 - Poytaxt Parking: https://www.spot.uz/ru/2025/06/23/paid-parking/ ·
   https://kun.uz/ru/news/2025/05/05/v-tashkente-v-testovom-rejime-zapushcheny-pervyye-pridorojnyye-platnyye-parkovki ·
@@ -64,10 +67,10 @@ server" while it runs. On failure: switch to the recording at the same step; nev
 
 ## Likely questions (answers are in the slide notes)
 
-- What is yours vs pretrained? → slide 4 strip; everything after detection is ours.
-- Accuracy on new lots? → slide 4 accuracy card (our Tashkent photos).
+- What is yours vs pretrained? → slide 5 strip; everything after detection is ours.
 - Night? → second, brightened view; real night photos still to measure.
-- Cost per camera? → slide 6 formula with the real server price.
+- How do you earn? → slide 7: drivers pay 5 000 so'm for the first hour and 2 000 so'm for each extra hour; 50% to the lot, 50% to us.
+- Cost per camera? → slide 7 formula with the real server price.
 - Privacy? → pictures never saved, operator view pixelated, no plates read, drivers never see the camera.
 - Licences? → AGPL pretrained weights; retrain on own data before commercial use (README).
-- Why not sensors or gates? → slide 5: one device per spot vs one phone per lot; gates don't know which spot is free.
+- Why not sensors or gates? → slide 6: one device per spot vs one phone per lot; gates don't know which spot is free.

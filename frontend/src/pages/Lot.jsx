@@ -53,7 +53,8 @@ export default function Lot() {
     if (selected && state && state.statuses[selected] !== "free") setSelected(null);
   }, [state, selected]);
 
-  const price = useMemo(() => (lot ? hours * lot.price_per_hour : 0), [lot, hours]);
+  // same rule as the server: first hour, then each extra hour (the server computes the final amount)
+  const price = useMemo(() => (lot ? lot.price_per_hour + (hours - 1) * lot.price_extra_hour : 0), [lot, hours]);
 
   async function book() {
     setBusy(true); setErr("");

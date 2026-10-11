@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api } from "../api.js";
+import { api, money } from "../api.js";
 import { operatorStore } from "../operatorStore.js";
 import MapView from "../components/MapView.jsx";
 import PinGate from "../components/PinGate.jsx";
@@ -147,7 +147,7 @@ export default function Setup() {
         <div className="card">
           <label className="field">Name<input value={info.name} onChange={(e) => setInfo({ ...info, name: e.target.value })} /></label>
           <label className="field">Address (shown to drivers)<input value={info.address} onChange={(e) => setInfo({ ...info, address: e.target.value })} /></label>
-          <label className="field">Price per hour (so'm)<input inputMode="numeric" value={info.price_per_hour}
+          <label className="field">Price for the first hour (so'm) — each extra hour is {money(lot.price_extra_hour, lot.currency)}<input inputMode="numeric" value={info.price_per_hour}
             onChange={(e) => setInfo({ ...info, price_per_hour: e.target.value.replace(/\D/g, "") })} /></label>
           <div className="field">Entrance on the map — drivers' navigation goes here
             <button className="btn ghost" onClick={useGps}>Use my GPS (stand at the entrance)</button>

@@ -127,7 +127,8 @@ def create_from_analysis(name, img, res):
     pin = new_pin()
     spots = [{k: s[k] for k in ("id", "row", "polygon", "source")} for s in res["spots"]]
     cfg = {"id": lot_id, "kind": "real", "name": name or "My lot", "address": "",
-           "price_per_hour": 5000, "currency": "UZS", "location": None,
+           "price_per_hour": config.FIRST_HOUR_PRICE, "price_extra_hour": config.EXTRA_HOUR_PRICE,
+           "currency": "UZS", "location": None,
            "published": False, "confirmed": False, "pin_hash": hash_pin(pin),
            "camera": {"type": "push", "label": "Phone camera at the lot",
                       "width": res["image"]["width"], "height": res["image"]["height"]},
@@ -361,4 +362,8 @@ def raw_jpeg(lot):
 
 
 def price(lot, minutes):
-    return int(math.ceil(max(minutes, 1) / 60.0)) * int(lot.cfg.get("price_per_hour", 5000))
+    """First started hour at the lot's price (price_per_hour), each further started hour at price_extra_hour."""
+    hours = int(math.ceil(max(minutes, 1) / 60.0))
+    first = int(lot.cfg.get("price_per_hour", config.FIRST_HOUR_PRICE))
+    extra = int(lot.cfg.get("price_extra_hour", config.EXTRA_HOUR_PRICE))
+    return first + (hours - 1) * extra

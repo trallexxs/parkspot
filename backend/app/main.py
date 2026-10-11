@@ -51,7 +51,8 @@ def lot_summary(lot):
     return {"id": lot.id, "name": c["name"], "address": c.get("address", ""), "kind": lot.kind,
             "location": c.get("location"), "published": c.get("published", False),
             "confirmed": c.get("confirmed", False),
-            "price_per_hour": c.get("price_per_hour"), "currency": c.get("currency"),
+            "price_per_hour": c.get("price_per_hour"),
+            "price_extra_hour": c.get("price_extra_hour", config.EXTRA_HOUR_PRICE), "currency": c.get("currency"),
             "counts": st["counts"], "total": st["total"],
             "camera_online": st["camera"]["online"], "updated_at": st["camera"]["updated_at"]}
 

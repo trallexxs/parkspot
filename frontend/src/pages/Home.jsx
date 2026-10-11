@@ -57,7 +57,7 @@ export default function Home() {
               {l.address && <div className="muted small">{l.address}</div>}
               <div className="lot-meta">
                 {l.km != null && <span className="meta-chip">{fmtKm(l.km)} away (straight line)</span>}
-                <span className="meta-chip">{money(l.price_per_hour, l.currency)} / hour</span>
+                <span className="meta-chip">{money(l.price_per_hour, l.currency)} first hour · +{money(l.price_extra_hour, l.currency)} each extra hour</span>
               </div>
             </div>
             <div className={"free-big" + (!l.camera_online ? " off" : l.counts.free === 0 ? " none" : "")}>

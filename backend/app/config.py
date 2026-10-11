@@ -49,7 +49,9 @@ CAMERA_OFFLINE_S = 120        # no frame for this long => the lot is shown as "c
 PIXELATE_VIEW_W = 240         # operator view: camera image pixelated to this width (privacy)
 PIXELATE_EDIT_W = 320         # spot editor: a little more detail to see the lane markings
 
-# Business rules (assumptions, stated in the README)
+# Business rules (stated in the README)
+FIRST_HOUR_PRICE = 5000     # so'm for the first (started) hour; the operator can change it per lot
+EXTRA_HOUR_PRICE = 2000     # so'm for each further started hour
 BOOKING_GRACE_MIN = 15      # booked spot is held this long after the arrival time
 WALKIN_HOLD_MIN = 5         # suggested spot is held for a walk-in driver this long
 BOOKING_HOLD_BEFORE_MIN = 30  # booked spot is held (shown reserved) from this long before arrival

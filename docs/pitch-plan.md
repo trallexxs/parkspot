@@ -27,7 +27,6 @@ app/demo/deploy → Bobur · business/pilot → Bahridin.
 - Slide 7: server price, phone price, pilot cost, payback months — from real quotes, or say aloud
   "hypothesis for the pilot"; the pilot lot (e.g. WIUT).
 - Slide 2 (spoken only): one sentence of real evidence, if the team has it.
-- Slide 1: speaker photos (replace the three circles).
 
 ## Competitor sources (slide 6; checked 10 Oct 2026 from search results — open each once)
 

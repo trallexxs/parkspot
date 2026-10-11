@@ -82,8 +82,8 @@ export function Legend() {
   return (
     <div className="legend">
       <span><i className="dot free" />Free</span>
-      <span><i className="dot occupied" />Occupied</span>
       <span><i className="dot reserved" />Reserved</span>
+      <span><i className="dot occupied" />Taken (car parked)</span>
       <span><i className="dot selected" />Selected</span>
       <span><i className="dot unknown" />No data</span>
     </div>

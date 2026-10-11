@@ -103,8 +103,8 @@ export default function Lot() {
         )}
         <div className="stats">
           <div><b className="free-c">{online ? <AnimatedNumber value={c?.free ?? "–"} /> : "?"}</b><span>free</span></div>
-          <div><b>{online ? <AnimatedNumber value={c?.occupied ?? "–"} /> : "?"}</b><span>occupied</span></div>
-          <div><b className="res-c"><AnimatedNumber value={(c?.reserved ?? 0) + (c?.conflict ?? 0)} /></b><span>booked</span></div>
+          <div><b className="res-c"><AnimatedNumber value={c?.reserved ?? 0} /></b><span>reserved</span></div>
+          <div><b className="taken-c">{online ? <AnimatedNumber value={(c?.occupied ?? 0) + (c?.conflict ?? 0)} /> : "?"}</b><span>taken</span></div>
         </div>
         <LiveBadge camera={state?.camera} />
         {canSeeCamera && (

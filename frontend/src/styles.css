@@ -23,8 +23,26 @@
   --danger: #d03050;
   --danger-soft: #fdecef;
   --danger-ink: #8a1c33;
+  /* spot colours: green = free, yellow = reserved (booked in advance), red = taken (a car is parked) */
+  --taken: #e5484d;
+  --taken-soft: #fde3e5;
+  --taken-ink: #a3162a;
+  --reserved: #eab308;
+  --reserved-soft: #fef5d3;
+  --reserved-ink: #6e4c00;
+  --reserved-text: #b78900;
   --road: #e3e9f1;
   --ring: rgba(31, 95, 224, .35);
+  --glass-1: rgba(255, 255, 255, .76);
+  --glass-2: rgba(255, 255, 255, .58);
+  --glass-edge: rgba(255, 255, 255, .75);
+  --glass-hi: rgba(255, 255, 255, .9);
+  --glass-lo: rgba(255, 255, 255, .25);
+  --glass-line: rgba(15, 26, 43, .1);
+  --lens-1: rgba(236, 242, 255, .95);
+  --lens-2: rgba(214, 226, 255, .6);
+  --lens-edge: rgba(255, 255, 255, .95);
+  --lens-glow: rgba(31, 95, 224, .2);
   --shadow: 0 1px 2px rgba(15, 26, 43, .04), 0 6px 20px rgba(15, 26, 43, .06);
   --shadow-lg: 0 10px 40px rgba(15, 26, 43, .16);
   --radius: 18px;
@@ -58,8 +76,25 @@
     --danger: #f2738b;
     --danger-soft: rgba(242, 115, 139, .14);
     --danger-ink: #ffb3c1;
+    --taken: #f2555a;
+    --taken-soft: rgba(242, 85, 90, .18);
+    --taken-ink: #ffb8bb;
+    --reserved: #facc15;
+    --reserved-soft: rgba(250, 204, 21, .17);
+    --reserved-ink: #fde68a;
+    --reserved-text: #facc15;
     --road: #1a2640;
     --ring: rgba(107, 156, 255, .45);
+    --glass-1: rgba(40, 52, 76, .7);
+    --glass-2: rgba(20, 29, 46, .62);
+    --glass-edge: rgba(255, 255, 255, .14);
+    --glass-hi: rgba(255, 255, 255, .2);
+    --glass-lo: rgba(255, 255, 255, .04);
+    --glass-line: rgba(0, 0, 0, .35);
+    --lens-1: rgba(130, 168, 255, .3);
+    --lens-2: rgba(76, 134, 255, .14);
+    --lens-edge: rgba(255, 255, 255, .18);
+    --lens-glow: rgba(76, 134, 255, .28);
     --shadow: none;
     --shadow-lg: 0 10px 40px rgba(0, 0, 0, .5);
   }
@@ -151,7 +186,8 @@ a.kv:hover b { color: var(--brand); }
 .stats b { display: block; font-size: 28px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .stats > div > span { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 .free-c { color: var(--free); }
-.res-c { color: var(--accent); }
+.res-c { color: var(--reserved-text); }
+.taken-c { color: var(--taken); }
 .num { display: inline-block; font-variant-numeric: tabular-nums; }
 .num.bump { animation: bump .5s var(--ease); }
 @keyframes bump { 30% { transform: scale(1.18); } 100% { transform: none; } }
@@ -217,8 +253,8 @@ a.kv:hover b { color: var(--brand); }
 .legend { display: flex; gap: 12px 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); justify-content: center; font-weight: 600; }
 .legend .dot { display: inline-block; width: 13px; height: 13px; border-radius: 4px; margin-right: 6px; vertical-align: -2px; }
 .dot.free { background: var(--free-soft); border: 2px solid var(--free); }
-.dot.occupied { background: var(--busy); }
-.dot.reserved { background: var(--accent); }
+.dot.occupied { background: var(--taken-soft); border: 2px solid var(--taken); }
+.dot.reserved { background: var(--reserved-soft); border: 2px solid var(--reserved); }
 .dot.selected { background: var(--brand); }
 .dot.unknown { background: transparent; border: 2px dashed var(--car); }
 .spot-map { display: flex; flex-direction: column; gap: 8px; }
@@ -236,11 +272,11 @@ a.kv:hover b { color: var(--brand); }
 .spot.free { background: var(--free-soft); border-color: var(--free); color: var(--free-ink); cursor: pointer; }
 .spot.free:hover { box-shadow: 0 0 0 4px color-mix(in srgb, var(--free) 22%, transparent); }
 .spot.free:active { transform: scale(.96); }
-.spot.reserved { background: var(--accent); color: var(--accent-ink); }
-.spot.conflict { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+.spot.reserved { background: var(--reserved-soft); border-color: var(--reserved); color: var(--reserved-ink); }
+.spot.occupied, .spot.conflict { background: var(--taken-soft); border-color: var(--taken); color: var(--taken-ink); }
+.spot.occupied .car-svg, .spot.conflict .car-svg { color: var(--taken); opacity: .32; }
 .spot.selected { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); box-shadow: 0 0 0 4px var(--ring); }
 .spot.mine { outline: 3px solid var(--brand); outline-offset: 2px; }
-.spot.occupied .spot-id { color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .45); }
 .spot.unknown { background: transparent; border: 2px dashed var(--car); color: var(--muted); }
 .spot.changed { animation: spot-flash 1.2s var(--ease); }
 @keyframes spot-flash { 0% { box-shadow: 0 0 0 0 var(--ring); } 35% { box-shadow: 0 0 0 7px var(--ring); } 100% { box-shadow: 0 0 0 0 transparent; } }
@@ -275,11 +311,29 @@ a.kv:hover b { color: var(--brand); }
 .ticket-right b { font-size: 24px; font-weight: 800; }
 .qr { align-self: center; border-radius: 12px; background: #fff; padding: 6px; }
 
-/* ---- bottom navigation ---- */
-.bottom-nav { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); width: min(528px, calc(100% - 24px)); background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: saturate(1.6) blur(14px); -webkit-backdrop-filter: saturate(1.6) blur(14px); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow-lg); display: flex; justify-content: space-around; padding: 6px; z-index: 30; }
-.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--muted); font-size: 12.5px; font-weight: 700; padding: 8px 4px; border-radius: 16px; transition: color .2s, background-color .2s; }
-.nav-item svg { width: 24px; height: 24px; }
-.nav-item.active { color: var(--brand); background: var(--brand-soft); }
+/* ---- bottom navigation: "liquid glass" (frosted bar, a glass bubble that stretches to the tapped item) ---- */
+.bottom-nav { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); width: min(528px, calc(100% - 24px)); display: flex; justify-content: space-around; padding: 6px; z-index: 30; border-radius: 28px; background: linear-gradient(180deg, var(--glass-1), var(--glass-2)); backdrop-filter: blur(22px) saturate(1.9); -webkit-backdrop-filter: blur(22px) saturate(1.9); border: 1px solid var(--glass-edge); box-shadow: inset 0 1px 0 var(--glass-hi), inset 0 -1px 0 var(--glass-lo), 0 0 0 .5px var(--glass-line), 0 12px 34px rgba(15, 26, 43, .16), 0 2px 6px rgba(15, 26, 43, .06); view-transition-name: tabbar; }
+.nav-lens { position: absolute; top: 6px; bottom: 6px; border-radius: 22px; pointer-events: none; background: linear-gradient(180deg, var(--lens-1), var(--lens-2)); box-shadow: inset 0 1px 1px var(--glass-hi), inset 0 -1px 2px rgba(255, 255, 255, .22), 0 0 0 1px var(--lens-edge), 0 6px 16px var(--lens-glow); backdrop-filter: blur(8px) saturate(2.2); -webkit-backdrop-filter: blur(8px) saturate(2.2); }
+.nav-item { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--muted); font-size: 12.5px; font-weight: 700; padding: 8px 4px; border-radius: 22px; transition: color .3s var(--ease), transform .2s var(--ease); -webkit-tap-highlight-color: transparent; }
+.nav-item svg { width: 24px; height: 24px; transition: transform .35s cubic-bezier(.3, 1.5, .5, 1); }
+.nav-item.active { color: var(--brand); }
+.nav-item.active svg { transform: scale(1.08); }
+.nav-item:active { transform: scale(.94); }
+
+/* switching section: the new page slides in from the side its menu item is on, the old one slides out;
+   the menu stays put (its bubble moves on its own) */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .45s; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+html[data-vt="fwd"]::view-transition-old(root) { animation-name: vt-out-l; }
+html[data-vt="fwd"]::view-transition-new(root) { animation-name: vt-in-r; }
+html[data-vt="back"]::view-transition-old(root) { animation-name: vt-out-r; }
+html[data-vt="back"]::view-transition-new(root) { animation-name: vt-in-l; }
+::view-transition-old(tabbar) { display: none; }
+::view-transition-new(tabbar) { animation: none; }
+html[data-vt] .page { animation: none; }
+@keyframes vt-out-l { to { opacity: 0; transform: translateX(-14%) scale(.97); filter: blur(3px); } }
+@keyframes vt-out-r { to { opacity: 0; transform: translateX(14%) scale(.97); filter: blur(3px); } }
+@keyframes vt-in-r { from { opacity: 0; transform: translateX(14%) scale(.97); filter: blur(3px); } }
+@keyframes vt-in-l { from { opacity: 0; transform: translateX(-14%) scale(.97); filter: blur(3px); } }
 
 /* ---- entrance display (always dark: a big screen at the gate) ---- */
 .display { min-height: 100vh; background: radial-gradient(90% 70% at 10% 0%, #16264a 0%, #0b1220 60%); color: #fff; padding: 4vh 5vw; display: flex; flex-direction: column; gap: 4vh; }

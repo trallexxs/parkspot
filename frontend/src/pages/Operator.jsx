@@ -88,8 +88,8 @@ export default function Operator() {
           {real && <div className="muted small">Camera image pixelated on the server: plates and faces are never shown. Last frame {ago(state?.camera?.updated_at)}.</div>}
           <div className="stats">
             <div><b className="free-c">{c?.free ?? "–"}</b><span>free</span></div>
-            <div><b>{c?.occupied ?? "–"}</b><span>occupied</span></div>
-            <div><b className="res-c">{c?.reserved ?? "–"}</b><span>booked</span></div>
+            <div><b className="res-c">{c?.reserved ?? "–"}</b><span>reserved</span></div>
+            <div><b className="taken-c">{c ? c.occupied + c.conflict : "–"}</b><span>taken</span></div>
             <div><b>{c?.unknown ?? 0}</b><span>no data</span></div>
           </div>
           {state?.camera?.quality?.warnings?.map((w) => <div key={w} className="notice small">{w}</div>)}

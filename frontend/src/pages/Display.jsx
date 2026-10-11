@@ -13,19 +13,10 @@ export default function Display() {
   const [dir, setDir] = useState(null);
 
   useEffect(() => { api.lot(id).then(setLot).catch(() => {}); }, [id]);
-  const nearest = (() => {
-    if (!lot || !state) return null;
-    for (const a of lot.map.aisles) {
-      const order = [];
-      const n = Math.max(a.left.length, a.right.length);
-      for (let i = 0; i < n; i++) { if (a.left[i]) order.push(a.left[i]); if (a.right[i]) order.push(a.right[i]); }
-      const f = order.find((s) => state.statuses[s] === "free");
-      if (f) return f;
-    }
-    for (const r of lot.map.rows) { const f = r.spots.find((s) => state.statuses[s] === "free"); if (f) return f; }
-    return null;
-  })();
-  useEffect(() => { if (nearest) api.directions(id, nearest).then(setDir).catch(() => {}); else setDir(null); }, [id, nearest]);
+  // the same spot a walk-in driver scanning the QR would be given (server rule), refreshed with the state
+  const [near] = usePoll(() => api.nearest(id), 2000, [id]);
+  const nearest = near?.spot_id || null;
+  useEffect(() => { setDir(near?.directions || null); }, [near]);
 
   const online = state ? state.camera.online : true;
   const free = !online ? "–" : state?.counts.free ?? "–";
@@ -48,10 +39,11 @@ export default function Display() {
             <>
               <div className="display-steps">
                 <span><Arrow dir="straight" size={90} /></span>
-                <span className="display-m">{dir.distance_m} m</span>
+                <span className="display-m">≈ {dir.distance_m} m</span>
                 <span><Arrow dir={dir.side} size={90} /></span>
               </div>
-              <div className="display-text">Straight {dir.distance_m} m, spot on your {dir.side}</div>
+              <div className="display-text">Straight about {dir.distance_m} m, spot on your {dir.side}</div>
+              <div className="display-note">Distance is an estimate from the camera picture</div>
             </>
           ) : (
             <div className="display-text">{dir.steps[0].text}</div>

@@ -128,9 +128,12 @@ check(st["camera"]["online"] and st["counts"]["free"] == len(spots), "camera onl
 published, _ = req("GET", "/api/lots")
 check(all(x["id"] != lot_id for x in published), "unpublished lot is not on the drivers' map")
 
+n, _ = req("GET", f"/api/lots/{lot_id}/nearest")
+check(n["spot_id"] in {s["id"] for s in spots} and n["directions"], f"find me a spot: {n['spot_id']}")
 b, _ = req("POST", f"/api/lots/{lot_id}/bookings", {"spot_id": "B5", "arrive_at": now, "duration_min": 60})
+check(b["hold"]["kind"] == "pay", "new booking carries its pay-by time")
 p, _ = req("POST", f"/api/bookings/{b['id']}/pay")
-check(p["status"] == "confirmed", f"booked and paid (sandbox): {p['directions']['short']}")
+check(p["status"] == "confirmed" and p["hold"]["kind"] == "arrive", f"booked and paid (sandbox): {p['directions']['short']}")
 st, _ = req("GET", f"/api/lots/{lot_id}/state")
 check(st["statuses"]["B5"] == "reserved", "the booked spot shows as reserved")
 c, _ = req("POST", f"/api/bookings/{b['id']}/cancel")

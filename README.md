@@ -37,16 +37,20 @@ guides them to the spot ("B5: straight 23 m, then right") — on the phone and o
 | URL | who | what |
 |---|---|---|
 | `/` | driver | **map** (OpenStreetMap) of real, published lots with live free counts from each lot's camera; distance from the driver; *Navigate* opens Google Maps or Yandex to the lot entrance |
-| `/lot/:id` | driver | spot map, booking (sandbox pay), in-lot directions ("B5: straight 25 m, then right"); booking pauses if the camera is offline |
-| `/booking/:id` | driver | ticket with QR, check-in at the gate, live status |
-| `/enter/:id` | driver | walk-in: QR at the gate → suggested spot → pay before exit |
+| `/lot/:id` | driver | spot map, **Find me a spot** (the free spot a walk-in driver would get now), booking (test payment), in-lot directions ("B5: straight about 25 m, then right" — metres are estimates); booking pauses if the camera is offline |
+| `/booking/:id` | driver | ticket with QR, check-in at the gate, live status, countdown of how long the spot stays yours |
+| `/enter/:id` | driver | walk-in: QR at the gate → suggested spot (with its hold countdown) → pay before exit |
 | `/display/:id` | entrance screen | free count, nearest spot with big arrows, QR to enter |
-| `/operator` | operator | set up a new lot with a camera phone, or open a lot this device manages |
+| `/operator` | operator | set up a new lot with a camera phone, open a lot this device manages, team tools (test set, measured quality) |
 | `/camera`, `/camera/:id` | operator | **the phone at the lot**: creates the lot (spots found automatically, PIN shown once), then sends a picture every 3–10 s |
 | `/operator/:id/setup` | operator | one-time check: delete wrong spots, draw missed ones, draw the aisle (entrance first), place the entrance on the map (GPS or drag), publish |
-| `/operator/:id` | operator (PIN) | pixelated camera with spot overlay, counts, events, gate QR to print, backup |
+| `/operator/:id` | operator (PIN) | pixelated camera with spot overlay, counts, events, gate QR to print, entrance screen and walk-in page, backup |
 | `/vision` | anyone / jury | any lot photo → vehicles, discovered spots, occupancy, timing |
 | `/label`, `/quality` | team | build the test set from our own photos; measured quality |
+
+Design: light and dark mode (follows the phone's setting); live counts and spot colours change
+smoothly; a short opening animation (a car parks in the free spot) plays once per visit and is skipped
+when the phone asks for reduced motion. On laptops the map and the list sit side by side.
 
 ## Real lots: what is real, and how a lot goes live
 

@@ -56,7 +56,7 @@ def directions(lot, spot_id):
     steps.append({"icon": side, "text": f"Spot {spot_id} is on your {side} — "
                                           f"{_ordinal(nth)} spot on the {side}"})
     return {"spot": spot_id, "side": side, "distance_m": dist, "nth_on_side": nth, "steps": steps,
-            "short": f"{spot_id}: straight {dist} m, then {side}"}
+            "short": f"{spot_id}: straight about {dist} m, then {side}"}
 
 
 def assign_aisle_rows(lot):

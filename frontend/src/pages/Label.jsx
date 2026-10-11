@@ -89,7 +89,7 @@ export default function Label() {
   return (
     <div className="page">
       <header className="page-head">
-        <Link to="/vision" className="muted small">← Vision</Link>
+        <Link to="/operator" className="muted small">← Operators</Link>
         <h1>Build the test set</h1>
         <p className="muted small">
           Photograph a real lot, let the model propose spots, then check <b>every</b> spot yourself.

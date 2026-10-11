@@ -1,21 +1,49 @@
+import { useEffect, useRef, useState } from "react";
 import { CarTop } from "./Icons.jsx";
 
-function Spot({ id, status, selected, onSelect, mine }) {
-  const cls = ["spot", status || "unknown", selected ? "selected" : "", mine ? "mine" : ""].join(" ");
+function Spot({ id, status, selected, onSelect, mine, changed }) {
+  const cls = ["spot", status || "unknown", selected ? "selected" : "", mine ? "mine" : "", changed ? "changed" : ""].join(" ");
   const clickable = status === "free" && onSelect;
   return (
-    <button className={cls} disabled={!clickable} onClick={() => clickable && onSelect(id)} aria-label={`${id} ${status}`}>
+    <button className={cls} data-spot={id} disabled={!clickable} onClick={() => clickable && onSelect(id)} aria-label={`${id} ${status || "unknown"}`}>
       {status === "occupied" || status === "conflict" ? <CarTop /> : null}
       <span className="spot-id">{id}</span>
     </button>
   );
 }
 
+/** Spots whose status just changed (for a short highlight while their colour fades). */
+function useChanged(statuses) {
+  const prev = useRef(null);
+  const timers = useRef([]);
+  const [changed, setChanged] = useState({});
+  useEffect(() => {
+    if (!statuses) return;
+    const p = prev.current;
+    prev.current = statuses;
+    if (!p) return;
+    const ids = Object.keys(statuses).filter((k) => p[k] !== undefined && p[k] !== statuses[k]);
+    if (!ids.length) return;
+    setChanged((c) => ({ ...c, ...Object.fromEntries(ids.map((k) => [k, true])) }));
+    timers.current.push(setTimeout(() => setChanged((c) => {
+      const n = { ...c };
+      ids.forEach((k) => delete n[k]);
+      return n;
+    }), 1300));
+  }, [statuses]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  return changed;
+}
+
 /** Seat-map style view. Aisles are drawn as a road with the driver's left/right columns;
  *  the entrance is at the bottom so "left" on screen = driver's left. */
 export default function SpotMap({ map, statuses, selected, onSelect, mine }) {
+  const changed = useChanged(statuses);
   if (!map) return null;
   const st = statuses || {};
+  const spot = (id) => (
+    <Spot key={id} id={id} status={st[id]} selected={selected === id} mine={mine === id} changed={changed[id]} onSelect={onSelect} />
+  );
   return (
     <div className="spot-map">
       {map.aisles.map((a) => {
@@ -27,13 +55,9 @@ export default function SpotMap({ map, statuses, selected, onSelect, mine }) {
             {rows.map((i) => (
               <div className="map-row" key={i}>
                 <div className="row-no">{i + 1}</div>
-                <div className="side">
-                  {a.left[i] && <Spot id={a.left[i]} status={st[a.left[i]]} selected={selected === a.left[i]} mine={mine === a.left[i]} onSelect={onSelect} />}
-                </div>
+                <div className="side">{a.left[i] && spot(a.left[i])}</div>
                 <div className="road"><span /></div>
-                <div className="side">
-                  {a.right[i] && <Spot id={a.right[i]} status={st[a.right[i]]} selected={selected === a.right[i]} mine={mine === a.right[i]} onSelect={onSelect} />}
-                </div>
+                <div className="side">{a.right[i] && spot(a.right[i])}</div>
               </div>
             ))}
             <div className="entrance">▲ Entrance</div>
@@ -45,11 +69,7 @@ export default function SpotMap({ map, statuses, selected, onSelect, mine }) {
           {map.rows.map((r) => (
             <div key={r.row} className="plain-row">
               <div className="plain-row-title">Row {r.row}</div>
-              <div className="plain-row-spots">
-                {r.spots.map((id) => (
-                  <Spot key={id} id={id} status={st[id]} selected={selected === id} mine={mine === id} onSelect={onSelect} />
-                ))}
-              </div>
+              <div className="plain-row-spots">{r.spots.map(spot)}</div>
             </div>
           ))}
         </div>

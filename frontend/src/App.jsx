@@ -1,5 +1,6 @@
 import { Route, Routes, useLocation } from "react-router-dom";
 import BottomNav from "./components/BottomNav.jsx";
+import Intro from "./components/Intro.jsx";
 import Home from "./pages/Home.jsx";
 import Lot from "./pages/Lot.jsx";
 import Booking from "./pages/Booking.jsx";
@@ -39,6 +40,7 @@ export default function App() {
         </Routes>
       </main>
       {!fullscreen && <BottomNav />}
+      <Intro />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { loadAndResize } from "../imageUtil.js";
@@ -9,9 +9,6 @@ export default function Vision() {
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [metrics, setMetrics] = useState(null);
-
-  useEffect(() => { api.metrics().then(setMetrics).catch(() => {}); }, []);
 
   async function run(f) {
     setRes(null); setErr(""); setBusy(true);
@@ -29,9 +26,9 @@ export default function Vision() {
         <p className="muted">Take or upload a photo of any parking lot. The model finds the cars, works out where the spots are (including empty ones) and which are free.</p>
       </header>
       <div className="card">
-        <label className="btn primary wide file-btn">
+        <label className={"btn primary lg wide file-btn" + (busy ? " disabled" : "")} aria-busy={busy}>
           {busy ? "Analysing…" : "Take / upload a photo"}
-          <input type="file" accept="image/*" capture="environment" onChange={(e) => e.target.files[0] && run(e.target.files[0])} />
+          <input type="file" accept="image/*" capture="environment" disabled={busy} onChange={(e) => e.target.files[0] && run(e.target.files[0])} />
         </label>
         {err && <div className="error small">{err}</div>}
       </div>
@@ -61,12 +58,8 @@ export default function Vision() {
         </>
       )}
 
-      <div className="card">
-        <div className="row-btns">
-          <Link className="btn ghost" to="/quality">Measured quality{metrics?.available ? ` (${metrics.summary.images} photos)` : ""}</Link>
-          <Link className="btn ghost" to="/label">Build the test set</Link>
-          <Link className="btn ghost" to="/operator">Parking operators</Link>
-        </div>
+      <div className="muted small center">
+        <Link to="/operator">For parking operators</Link>
       </div>
     </div>
   );

@@ -32,6 +32,7 @@ export const api = {
   exportLot: (id, pin) => call("GET", `/api/lots/${id}/export`, null, false, pinHeader(pin)),
   importLot: (cfg, pin) => call("POST", "/api/lots/import", cfg, false, pinHeader(pin)),
   directions: (id, spot) => call("GET", `/api/lots/${id}/directions/${spot}`),
+  nearest: (id) => call("GET", `/api/lots/${id}/nearest`),
   book: (id, body) => call("POST", `/api/lots/${id}/bookings`, body),
   booking: (bid) => call("GET", `/api/bookings/${bid}`),
   payBooking: (bid) => call("POST", `/api/bookings/${bid}/pay`),

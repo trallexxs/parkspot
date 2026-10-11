@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api, money } from "../api.js";
 import { addTicket } from "../storage.js";
 import Directions from "../components/Directions.jsx";
+import Countdown from "../components/Countdown.jsx";
 
 /** Walk-in flow: the driver scans the QR code at the gate -> /enter/:lotId -> a session starts. */
 export default function Enter() {
@@ -12,7 +13,7 @@ export default function Enter() {
   const [lotName, setLotName] = useState("");
   const [card, setCard] = useState("");
   const [msg, setMsg] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState("");
 
   useEffect(() => { if (id) api.lot(id).then((l) => setLotName(l.name)).catch(() => {}); }, [id]);
   useEffect(() => {
@@ -23,20 +24,20 @@ export default function Enter() {
     return () => clearInterval(t);
   }, [sid]);
 
-  const act = async (fn) => {
-    setBusy(true); setMsg("");
+  const act = async (name, fn) => {
+    setBusy(name); setMsg("");
     try { setS(await fn()); } catch (e) { setMsg(e.status === 402 ? `Please pay ${money(e.detail.amount_due)} before leaving.` : e.message); }
-    setBusy(false);
+    setBusy("");
   };
 
   async function start() {
-    setBusy(true);
+    setBusy("enter");
     try {
       const r = await api.startSession(id);
       addTicket({ id: r.id, kind: "session", lot: r.lot_name });
       nav(`/session/${r.id}`, { replace: true });
     } catch (e) { setMsg(e.message); }
-    setBusy(false);
+    setBusy("");
   }
 
   if (!sid) {
@@ -45,7 +46,7 @@ export default function Enter() {
         <header className="page-head"><h1>Welcome to {lotName || "the lot"}</h1></header>
         <div className="card">
           <p>No booking needed. Enter now and pay any time before you leave — in the app, or automatically with a saved card.</p>
-          <button className="btn primary wide" disabled={busy} onClick={start}>Enter the lot</button>
+          <button className="btn primary lg wide" disabled={!!busy} aria-busy={busy === "enter"} onClick={start}>Enter the lot</button>
           {msg && <div className="error small">{msg}</div>}
         </div>
       </div>
@@ -63,8 +64,9 @@ export default function Enter() {
         <div className="card">
           {s.spot_id ? (
             <>
-              <div className="muted small">Suggested free spot (held for you for 5 min)</div>
+              <div className="muted small">Suggested free spot</div>
               <div className="sheet-spot">{s.spot_id}</div>
+              {s.hold_until && <Countdown start={s.started_at} until={s.hold_until} label="Held for you for" overLabel="Hold time is up — the spot may be taken by someone else" />}
               <Directions d={s.directions} big />
             </>
           ) : (
@@ -80,15 +82,15 @@ export default function Enter() {
       </div>
       {active && (
         <div className="card">
-          <div className="sandbox">SANDBOX PAYMENT — test mode, use 4242 4242 4242 4242</div>
+          <div className="sandbox">Test payment — no real money; use card 4242 4242 4242 4242</div>
           {!s.card_last4 && (
             <div className="inline">
               <input placeholder="Card number" inputMode="numeric" value={card} onChange={(e) => setCard(e.target.value)} />
-              <button className="btn" disabled={busy} onClick={() => act(() => api.attachCard(sid, card))}>Save card</button>
+              <button className="btn" disabled={!!busy} aria-busy={busy === "card"} onClick={() => act("card", () => api.attachCard(sid, card))}>Save card</button>
             </div>
           )}
-          {s.amount_due > 0 && <button className="btn ghost wide" disabled={busy} onClick={() => act(() => api.paySession(sid))}>Pay now {money(s.amount_due, s.currency)}</button>}
-          <button className="btn primary wide" disabled={busy} onClick={() => act(() => api.exitSession(sid))}>I'm leaving — open the exit</button>
+          {s.amount_due > 0 && <button className="btn ghost wide" disabled={!!busy} aria-busy={busy === "pay"} onClick={() => act("pay", () => api.paySession(sid))}>Pay now {money(s.amount_due, s.currency)} (test)</button>}
+          <button className="btn primary lg wide" disabled={!!busy} aria-busy={busy === "exit"} onClick={() => act("exit", () => api.exitSession(sid))}>I'm leaving — open the exit</button>
           {msg && <div className="error small">{msg}</div>}
         </div>
       )}

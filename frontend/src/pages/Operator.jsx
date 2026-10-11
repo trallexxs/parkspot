@@ -99,6 +99,7 @@ export default function Operator() {
               <Link className="btn ghost" to={`/camera/${id}`}>This phone = the camera</Link>
               <Link className="btn ghost" to={`/lot/${id}`}>Driver page</Link>
               <a className="btn ghost" href={`/display/${id}`} target="_blank" rel="noreferrer">Entrance screen</a>
+              <a className="btn ghost" href={`/enter/${id}`} target="_blank" rel="noreferrer">Walk-in page (gate QR)</a>
               <button className="btn ghost" onClick={() => api.exportLot(id, pin).then((cfg) => download(`${id}.json`, cfg))}>Download backup</button>
             </div>
           )}

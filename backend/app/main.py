@@ -99,6 +99,19 @@ def lot_raw(lot_id: str, pin: str = "", x_lot_pin: str | None = Header(None)):
     return Response(jpg, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
+@app.get("/api/lots/{lot_id}/nearest")
+def lot_nearest(lot_id: str):
+    """"Find me a spot": the free spot a walk-in driver would be given now (same rule), not held."""
+    lot = get_lot(lot_id)
+    st = lots.state(lot)
+    if not st["camera"]["online"]:
+        return {"spot_id": None, "reason": "offline"}
+    spot = lots.nearest_free(lot, st["statuses"])
+    if not spot:
+        return {"spot_id": None, "reason": "full"}
+    return {"spot_id": spot, "directions": directions(lot.cfg, spot)}
+
+
 @app.get("/api/lots/{lot_id}/directions/{spot_id}")
 def lot_directions(lot_id: str, spot_id: str):
     d = directions(get_lot(lot_id).cfg, spot_id)
@@ -233,11 +246,30 @@ class BookingIn(BaseModel):
 def _booking_out(b):
     lot = lots.LOTS.get(b["lot_id"])
     b = dict(b)
+    if lot:
+        statuses = lots.state(lot)["statuses"]  # may expire, release or move this booking: re-read it
+        cur = store.q("SELECT * FROM bookings WHERE id=?", (b["id"],), one=True)
+        b = dict(cur) if cur else b
+        b["spot_status"] = statuses.get(b["spot_id"])
     b["lot_name"] = lot.cfg["name"] if lot else ""
     b["directions"] = directions(lot.cfg, b["spot_id"]) if lot else None
-    if lot:
-        b["spot_status"] = lots.state(lot)["statuses"].get(b["spot_id"])
+    b["hold"] = _booking_hold(b)
     return b
+
+
+def _booking_hold(b):
+    """How long the spot stays the driver's, from the same rules lots.state() enforces
+    (config.py): for the countdown on the ticket."""
+    arrive = store.parse(b["arrive_at"])
+    if b["status"] == "pending_payment":
+        return {"kind": "pay", "until": store.iso(store.parse(b["created_at"])
+                                                  + timedelta(minutes=config.PENDING_PAYMENT_HOLD_MIN))}
+    if b["status"] == "confirmed":
+        return {"kind": "arrive", "from": store.iso(arrive - timedelta(minutes=config.BOOKING_HOLD_BEFORE_MIN)),
+                "until": store.iso(arrive + timedelta(minutes=config.BOOKING_GRACE_MIN))}
+    if b["status"] == "checked_in":
+        return {"kind": "stay", "until": store.iso(arrive + timedelta(minutes=b["duration_min"]))}
+    return None
 
 
 @app.post("/api/lots/{lot_id}/bookings")
@@ -350,6 +382,9 @@ def _session_out(s):
     s["lot_name"] = lot.cfg["name"] if lot else ""
     s["currency"] = lot.cfg.get("currency", "UZS") if lot else ""
     s["directions"] = directions(lot.cfg, s["spot_id"]) if lot and s["spot_id"] else None
+    # the suggested spot is held for a walk-in driver for WALKIN_HOLD_MIN (lots._walkin_holds)
+    s["hold_until"] = (store.iso(start + timedelta(minutes=config.WALKIN_HOLD_MIN))
+                       if s["status"] == "active" and s["spot_id"] else None)
     return s
 
 

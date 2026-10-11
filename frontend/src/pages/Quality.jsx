@@ -20,7 +20,7 @@ export default function Quality() {
   if (!m.available)
     return (
       <div className="page">
-        <header className="page-head"><Link to="/vision" className="muted small">← Vision</Link><h1>Measured quality</h1></header>
+        <header className="page-head"><Link to="/operator" className="muted small">← Operators</Link><h1>Measured quality</h1></header>
         <div className="card">No evaluation has been run yet. Build the test set on the <Link to="/label">labelling page</Link>, then run <span className="mono">eval/evaluate.py</span>.</div>
       </div>
     );
@@ -28,7 +28,7 @@ export default function Quality() {
   return (
     <div className="page">
       <header className="page-head">
-        <Link to="/vision" className="muted small">← Vision</Link>
+        <Link to="/operator" className="muted small">← Operators</Link>
         <h1>Measured quality</h1>
         <div className="muted small">Test set: {m.test_set.images} photos, {m.test_set.spots} hand-checked spots · evaluated {m.evaluated_at}</div>
       </header>

@@ -33,6 +33,14 @@ export default function OperatorHome() {
           <button className="btn" disabled={!code} onClick={() => nav(`/operator/${code}`)}>Open</button>
         </div>
       </div>
+      <div className="card">
+        <h3>Team tools</h3>
+        <div className="muted small">Measure how well the detection works on our own photos.</div>
+        <div className="row-btns">
+          <Link className="btn ghost" to="/label">Build the test set</Link>
+          <Link className="btn ghost" to="/quality">Measured quality</Link>
+        </div>
+      </div>
     </div>
   );
 }

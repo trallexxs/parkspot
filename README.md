@@ -11,7 +11,7 @@ Track: Computer Vision · Mode: **Startup**
 
 Parking lots already have cameras, or can get one: a phone mounted above the lot. ParkDet turns
 those camera frames into a live map of free spots,
-lets drivers **book a spot ahead** or **just drive in via a QR code and pay before leaving**, and
+lets drivers **book a spot ahead** or **just drive in: scan the QR code, the first hour is paid automatically**, and
 guides them to the spot ("B5: straight 23 m, then right") — on the phone and on a big entrance screen.
 
 **What is ours (not a call to someone else's model):**
@@ -40,14 +40,16 @@ guides them to the spot ("B5: straight 23 m, then right") — on the phone and o
 | URL | who | what |
 |---|---|---|
 | `/` | driver | **map** (OpenStreetMap) of real, published lots with live free counts from each lot's camera; distance from the driver; *Navigate* opens Google Maps or Yandex to the lot entrance |
-| `/lot/:id` | driver | spot map, **Find me a spot** (the free spot a walk-in driver would get now), booking (test payment), in-lot directions ("B5: straight about 25 m, then right" — metres are estimates); booking pauses if the camera is offline |
+| `/spots` | driver | menu tab: the live spot map of the nearest lot (switch lots at the top), same as `/lot/:id` |
+| `/scan` | driver | the round QR button in the middle of the menu: scans the gate QR with the camera (or a photo of it) |
+| `/lot/:id` | driver | spot map, **Find me a spot** (the nearest free spot, same rule as the entrance screen), booking (test payment), in-lot directions ("B5: straight about 25 m, then right" — metres are estimates); booking pauses if the camera is offline |
 | `/booking/:id` | driver | ticket with QR, check-in at the gate, live status, countdown of how long the spot stays yours |
-| `/enter/:id` | driver | walk-in: QR at the gate → suggested spot (with its hold countdown) → pay before exit |
+| `/enter/:id`, `/session/:sid` | driver | walk-in: scan the gate QR → first hour (5 000 so'm) paid automatically (test card) → choose a free spot (held 5 min, the camera confirms the car) or just park and tap your spot → leaving charges each extra hour automatically. Drivers with a booking need no scan |
 | `/display/:id` | entrance screen | free count, nearest spot with big arrows, QR to enter |
 | `/operator` | operator | set up a new lot with a camera phone, open a lot this device manages, team tools (test set, measured quality) |
 | `/camera`, `/camera/:id` | operator | **the phone at the lot**: creates the lot (spots found automatically, PIN shown once), then sends a picture every 3–10 s |
 | `/operator/:id/setup` | operator | one-time check: delete wrong spots, draw missed ones, draw the aisle (entrance first), place the entrance on the map (GPS or drag), publish |
-| `/operator/:id` | operator (PIN) | pixelated camera with spot overlay, counts, events, gate QR to print, entrance screen and walk-in page, backup |
+| `/operator/:id` | operator (PIN) | pixelated camera with spot overlay, counts, events, gate QR to print, entrance screen, a test walk-in visit, backup |
 | `/vision` | anyone / jury | any lot photo → vehicles, discovered spots, occupancy, timing |
 | `/label`, `/quality` | team | build the test set from our own photos; measured quality |
 
@@ -182,7 +184,7 @@ version would integrate a local provider (Payme / Click / Uzum) — out of scope
 ## Business-rule assumptions (configurable in `backend/app/config.py`)
 
 Price: 5 000 so'm for the first started hour, 2 000 so'm for each further started hour; each payment is split 50% to the parking lot, 50% to ParkDet · booked spot held from 30 min before arrival until
-15 min after · unpaid booking holds the spot 10 min · suggested walk-in spot held 5 min.
+15 min after · unpaid booking holds the spot 10 min · a spot a walk-in driver chooses is held 5 min.
 
 ## Data sources, models and licences
 
@@ -191,6 +193,6 @@ Price: 5 000 so'm for the first started hour, 2 000 so'm for each further starte
 | `backend/weights/aerial_vehicles.pt` / `.onnx` (top-down detector) | Ultralytics CI asset `solutions_ci_parking_model.pt` (github.com/ultralytics/assets) | AGPL-3.0. Its class list matches the VisDrone dataset (pedestrian … motor); if trained on it, that dataset is for non-commercial research — **must be replaced by our own fine-tuned model before any commercial use**. |
 | `backend/weights/yolo11n.pt` / `.onnx` | Ultralytics YOLO11n (COCO), taken from our elimination-stage repo github.com/trallexxs/trafficcv | AGPL-3.0 |
 | Leaflet (map, BSD-2-Clause); map tiles © OpenStreetMap contributors (ODbL), attribution shown on the map | public library / data | |
-| onnxruntime, FastAPI, OpenCV, NumPy, React, Vite, react-router, qrcode (run time); Ultralytics (export only) | public libraries | MIT / MIT / Apache-2.0 / BSD / MIT / MIT / MIT / MIT; AGPL-3.0 |
+| onnxruntime, FastAPI, OpenCV, NumPy, React, Vite, react-router, qrcode, jsQR (run time); Ultralytics (export only) | public libraries | MIT / MIT / Apache-2.0 / BSD / MIT / MIT / MIT / MIT / Apache-2.0; AGPL-3.0 |
 
 Reused from our elimination stage (declared): YOLO11n weights file only.

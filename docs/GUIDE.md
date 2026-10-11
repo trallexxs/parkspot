@@ -10,7 +10,7 @@ Tip: open a file on GitHub, press Ctrl+F (Cmd+F on a Mac) and search for a name 
 
 ParkDet (**Park**ing **Det**ector, "Free parking spots, seen live") turns one phone camera above a parking lot into a live map of free spots.
 The server finds the cars in each picture with two open-source vehicle detectors, and our own code finds the parking spots and decides which are free.
-Drivers see this on a map and can book a spot (test payment, no real money) or drive in by scanning the QR code at the gate and pay before leaving; an entrance screen shows the free count, and operators set up a lot with a phone and a PIN.
+Drivers see this on a map and can book a spot (test payment, no real money) or drive in by scanning the QR code at the gate (the first hour is then paid automatically, in test mode); an entrance screen shows the free count, and operators set up a lot with a phone and a PIN.
 
 Live site: <https://parkspot-5bo4.onrender.com>. It runs on free hosting, so open it a minute early (it sleeps when nobody uses it). The address `/api/health` shows which commit is running.
 
@@ -27,7 +27,7 @@ phone camera ─► server ─► picture check ─► 2 vehicle detectors ─�
 3. **Picture check, then car detection.** [cv/quality.py](../backend/app/cv/quality.py) measures light, blur, glare and contrast; a dark picture also gets a brightened copy. [cv/detector.py](../backend/app/cv/detector.py) runs two pretrained YOLO11 detectors (files in [backend/weights/](../backend/weights/)) on the server's CPU and merges their boxes into one list of vehicles.
 4. **Spots, and free or taken.** When a lot is created, [cv/layout.py](../backend/app/cv/layout.py) finds the rows of parked cars and the spots, including empty spots in the gaps. After that the lot's saved spots are used (the operator checks them once). [cv/occupancy.py](../backend/app/cv/occupancy.py) decides for each spot whether a car is in it and smooths this over several pictures. Then `state()` in [lots.py](../backend/app/lots.py) adds bookings and walk-in holds, so every spot gets a status: free, occupied (taken), reserved, conflict (booked, but another car is there) or unknown (no data).
 5. **The driver app.** The website in [frontend/](../frontend/) asks the server for fresh data every few seconds ("polling", [usePoll.js](../frontend/src/usePoll.js)). [Home.jsx](../frontend/src/pages/Home.jsx) shows the published lots on a map with live free counts. [Lot.jsx](../frontend/src/pages/Lot.jsx) shows the spot map, "Find me a spot" and in-lot directions (made by [guidance.py](../backend/app/guidance.py)). Spot colours ([SpotMap.jsx](../frontend/src/components/SpotMap.jsx)): **green** = free, **yellow** = reserved (booked in advance, or held for a few minutes for a driver who just drove in), **red** = taken (a car is parked there), **grey** = no data (the camera has sent no picture for 2 minutes, or none since the server started: nothing is guessed), **blue** = the spot you selected.
-6. **Booking, walk-in, test payment.** Booking: choose a free spot, arrival time and hours, pay (test), then get a ticket with a QR code, a check-in button and a countdown ([Booking.jsx](../frontend/src/pages/Booking.jsx)). Walk-in: scan the QR code at the gate, enter, get a suggested spot, pay before leaving ([Enter.jsx](../frontend/src/pages/Enter.jsx)). The rules are in [main.py](../backend/app/main.py) and [lots.py](../backend/app/lots.py), prices and hold times in [config.py](../backend/app/config.py), and the records in a small database ([store.py](../backend/app/store.py)). No real money moves.
+6. **Booking, walk-in, test payment.** Booking: choose a free spot, arrival time and hours, pay (test), then get a ticket with a QR code, a check-in button and a countdown ([Booking.jsx](../frontend/src/pages/Booking.jsx)). Walk-in: scan the QR code at the gate with the round button in the middle of the menu ([Scan.jsx](../frontend/src/pages/Scan.jsx)); the first hour (5 000 so'm) is paid automatically, then the driver chooses a free spot or just parks and taps his spot, and each extra hour is paid automatically when he leaves ([Enter.jsx](../frontend/src/pages/Enter.jsx)). Booked drivers do not scan anything. The rules are in [main.py](../backend/app/main.py) and [lots.py](../backend/app/lots.py), prices and hold times in [config.py](../backend/app/config.py), and the records in a small database ([store.py](../backend/app/store.py)). No real money moves.
 7. **The entrance screen.** [Display.jsx](../frontend/src/pages/Display.jsx) shows the free count (or FULL), the nearest free spot with big arrows, and the QR code to enter. It refreshes every 2 seconds.
 8. **Operator tools.** [OperatorHome.jsx](../frontend/src/pages/OperatorHome.jsx) is the start page. [Setup.jsx](../frontend/src/pages/Setup.jsx) is the one-time check: delete wrong spots, draw missed ones, draw the driving aisle, place the entrance on the map, publish. [Operator.jsx](../frontend/src/pages/Operator.jsx) shows the pixelated camera picture with the spots, live counts, the event log, the gate QR code to print and a backup button. Setup and Operator need the lot's PIN ([PinGate.jsx](../frontend/src/components/PinGate.jsx)).
 
@@ -143,8 +143,10 @@ All 71 files stored in git (plus this guide), folder by folder. Things made by i
 | [Home.jsx](../frontend/src/pages/Home.jsx) | Drivers' map and list of published lots: live free count, distance, price, Navigate buttons. |
 | [Lot.jsx](../frontend/src/pages/Lot.jsx) | One lot: live counts, spot map, "Find me a spot", directions, booking form. Booking is switched off while the camera is offline. |
 | [Booking.jsx](../frontend/src/pages/Booking.jsx) | The booking ticket: status, test payment, QR code, check-in button, hold countdown, directions, and a notice if the booking was moved. |
-| [Tickets.jsx](../frontend/src/pages/Tickets.jsx) | "My tickets": the bookings and walk-in visits saved on this phone. |
-| [Enter.jsx](../frontend/src/pages/Enter.jsx) | Walk-in: enter the lot, suggested spot with a countdown, time and price so far, test card, pay, "I'm leaving". |
+| [Tickets.jsx](../frontend/src/pages/Tickets.jsx) | "Tickets": the bookings and walk-in visits saved on this phone. |
+| [Spots.jsx](../frontend/src/pages/Spots.jsx) | The "Spots" menu tab: the live spot map of the nearest lot (or the one picked at the top), with booking. |
+| [Scan.jsx](../frontend/src/pages/Scan.jsx) | The QR scanner behind the round button: reads the gate QR with the camera (the browser's own reader, or jsQR on iPhones and other browsers) or from a photo, then opens the walk-in. |
+| [Enter.jsx](../frontend/src/pages/Enter.jsx) | Walk-in: starts the visit and pays the first hour automatically (test), shows the free spots to choose one or to tap the spot you parked in, time and price so far, "I'm leaving" (extra hours paid automatically). Sends a driver who has a booking here to the ticket instead. |
 | [Display.jsx](../frontend/src/pages/Display.jsx) | Entrance screen: big free count (or FULL / No live data), nearest free spot with arrows, QR code to enter. |
 | [Vision.jsx](../frontend/src/pages/Vision.jsx) | Upload any parking-lot photo and see the cars, the discovered spots, free/taken and the time taken. Made for the jury's own photo. |
 | [Camera.jsx](../frontend/src/pages/Camera.jsx) | Turns a phone into the lot's camera: creates the lot (PIN shown once), then sends pictures, keeps the screen on, and restores the lot if the server forgot it. |
@@ -167,7 +169,7 @@ All 71 files stored in git (plus this guide), folder by folder. Things made by i
 | [NavButtons.jsx](../frontend/src/components/NavButtons.jsx) | "Navigate · Google Maps" and "Yandex" buttons that lead to the lot entrance. |
 | [LiveBadge.jsx](../frontend/src/components/LiveBadge.jsx) | "Camera live" or "Camera offline", seconds since the last picture, server time per picture. |
 | [AnimatedNumber.jsx](../frontend/src/components/AnimatedNumber.jsx) | Makes a live count glide to its new value instead of jumping. |
-| [BottomNav.jsx](../frontend/src/components/BottomNav.jsx) | The floating "liquid glass" menu at the bottom (Map, My tickets, Vision): a glass bubble stretches and slides to the tapped item, and the new page slides in from that side. |
+| [BottomNav.jsx](../frontend/src/components/BottomNav.jsx) | The floating "liquid glass" menu at the bottom (Map, Spots, the round QR button, Tickets, Vision): a glass bubble stretches and slides to the tapped item, and the new page slides in from that side. |
 | [Intro.jsx](../frontend/src/components/Intro.jsx) | Short opening animation (a car parks in the free spot), once per visit; skipped when the phone asks for reduced motion. |
 | [Logo.jsx](../frontend/src/components/Logo.jsx) | The ParkDet logo: a "P" with an amber dot. |
 | [Icons.jsx](../frontend/src/components/Icons.jsx) | Small drawn icons: home, ticket, camera, arrows, pin, car. |
@@ -205,7 +207,7 @@ While a paid booking holds a spot, if the camera sees another car there, the ser
 **Where:** `FIRST_HOUR_PRICE`, `EXTRA_HOUR_PRICE` in [config.py](../backend/app/config.py); `price()` in [lots.py](../backend/app/lots.py); [README "Business-rule assumptions"](../README.md#business-rule-assumptions-configurable-in-backendappconfigpy).
 
 #### 7. How long is a spot held for a booking or a walk-in?
-An unpaid booking must be paid within 10 minutes or it expires (`PENDING_PAYMENT_HOLD_MIN`). A paid booking holds the spot from 30 minutes before the arrival time (`BOOKING_HOLD_BEFORE_MIN`) until 15 minutes after it (`BOOKING_GRACE_MIN`); no check-in by then means "no-show" and the spot is released. After check-in the spot is held until the booked time ends. A walk-in driver's suggested spot is held for 5 minutes (`WALKIN_HOLD_MIN`).
+An unpaid booking must be paid within 10 minutes or it expires (`PENDING_PAYMENT_HOLD_MIN`). A paid booking holds the spot from 30 minutes before the arrival time (`BOOKING_HOLD_BEFORE_MIN`) until 15 minutes after it (`BOOKING_GRACE_MIN`); no check-in by then means "no-show" and the spot is released. After check-in the spot is held until the booked time ends. A spot that a walk-in driver chooses is held for 5 minutes (`WALKIN_HOLD_MIN`); when the camera sees a car arrive in it, the visit is marked as parked there.
 
 **Where:** [config.py](../backend/app/config.py); enforced in `_held_bookings` and `_walkin_holds` in [lots.py](../backend/app/lots.py); shown by [Countdown.jsx](../frontend/src/components/Countdown.jsx).
 
@@ -225,9 +227,9 @@ When a lot is created, the server makes a random 6-digit PIN and shows it once. 
 **Where:** `new_pin`, `hash_pin`, `check_pin` in [lots.py](../backend/app/lots.py); `require_operator` in [main.py](../backend/app/main.py); [PinGate.jsx](../frontend/src/components/PinGate.jsx), [operatorStore.js](../frontend/src/operatorStore.js).
 
 #### 11. Is the payment real?
-No. Every payment is in test (sandbox) mode, and the screens say so. "Pay" only marks the booking as paid with a test reference. Walk-in drivers can save a test card (4242 4242 4242 4242); only its last 4 digits are kept, and the "charge" at exit is also a test. A real version would connect a local provider (Payme, Click or Uzum); that is outside the prototype.
+No. Every payment is in test (sandbox) mode, and the screens say so. "Pay" only marks the booking as paid with a test reference. A walk-in visit uses a test card (only "4242" is kept): the first hour is "charged" automatically on entry and each extra hour on leaving, all as tests. A real version would connect a local provider (Payme, Click or Uzum); that is outside the prototype.
 
-**Where:** `pay_booking`, `attach_card`, `pay_session`, `exit_session` in [main.py](../backend/app/main.py); [Booking.jsx](../frontend/src/pages/Booking.jsx), [Enter.jsx](../frontend/src/pages/Enter.jsx).
+**Where:** `pay_booking`, `start_session`, `exit_session` in [main.py](../backend/app/main.py); [Booking.jsx](../frontend/src/pages/Booking.jsx), [Enter.jsx](../frontend/src/pages/Enter.jsx).
 
 #### 12. How fast is it, how much memory, how many cameras per server?
 From the README: on a 4-core Intel Xeon 2.1 GHz using 2 threads, one 1280×720 camera frame takes 141 ms on average (159 ms p95, 20 runs), with no GPU. On the live free server (0.1 vCPU) a 640×360 frame takes about 2.7 s and a photo about 3 s, so the camera phone sends one picture every 5–10 s there. Memory: under 300 MB peak in the smoke test with a 4000×2250 upload, under 400 MB in all our tests. Capacity: one picture every 3 s per camera ÷ about 0.15 s per picture = about 20 cameras per 2-thread worker at full load; we plan for 8.
@@ -283,9 +285,11 @@ The list is in [App.jsx](../frontend/src/App.jsx); the screens are in [frontend/
 | `/` | Driver | Map and list of live lots: free count, distance, price, Navigate. |
 | `/lot/:id` | Driver | One lot: spot map, "Find me a spot", directions, booking. |
 | `/booking/:bid` | Driver | Booking ticket: test payment, QR code, check-in, countdown. |
-| `/tickets` | Driver | "My tickets": bookings and walk-ins saved on this phone. |
-| `/enter/:id` | Driver (walk-in) | Opened by the QR code at the gate: enter without a booking. |
-| `/session/:sid` | Driver (walk-in) | The running visit: suggested spot, time, price, pay, leave. |
+| `/spots` | Driver | Menu tab: live spot map of the nearest lot, booking. |
+| `/scan` | Driver | Round QR button in the middle of the menu: scan the gate QR (camera or photo). |
+| `/tickets` | Driver | "Tickets": bookings and walk-ins saved on this phone. |
+| `/enter/:id` | Driver (walk-in) | Opened by the QR code at the gate: the visit starts and the first hour is paid automatically (test). |
+| `/session/:sid` | Driver (walk-in) | The running visit: choose a spot or tap the one you parked in, time, price, leave (extra hours paid automatically). |
 | `/display/:id` | Entrance screen (opened by the operator) | Big free count, nearest free spot with arrows, QR code to enter. |
 | `/vision` | Anyone, jury | Analyse any parking-lot photo. |
 | `/camera` | Operator | Create a lot with the phone that will stay at the lot. |
